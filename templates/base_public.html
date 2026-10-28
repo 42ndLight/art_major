@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Invoice{% endblock %} — ArtMajor</title>
+
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- daisyUI CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.1/dist/full.min.css" rel="stylesheet" type="text/css" />
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-base-200 min-h-screen flex flex-col text-base-content antialiased">
+
+  <!-- Minimal Brand Header -->
+  <header class="bg-base-100 border-b border-base-300 py-3 px-6">
+    <div class="max-w-4xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2 font-bold text-lg">
+        <span class="text-xl">🎨</span>
+        <span>ArtMajor</span>
+      </div>
+      <div class="text-xs text-base-content/50">
+        Secure Private Customer Portal
+      </div>
+    </div>
+  </header>
+
+  <!-- Flash Messages -->
+  {% if messages %}
+  <div class="max-w-4xl mx-auto w-full px-4 pt-4 space-y-2">
+    {% for message in messages %}
+    <div class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} shadow-sm">
+      <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Main Document Container -->
+  <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 my-6">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Minimal Footer -->
+  <footer class="text-center text-xs text-base-content/40 py-6 border-t border-base-300 bg-base-100 mt-auto">
+    Powered by ArtMajor Workspace &bull; Private, encrypted client communication link
+  </footer>
+
+</body>
+</html>

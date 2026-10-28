@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — ArtMajor{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8">
+
+  <!-- Page header & Quick Actions -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-base-content">Dashboard</h1>
+      <p class="text-base-content/60 mt-1">
+        Welcome back,
+        <span class="font-semibold text-base-content">
+          {{ request.user.artist_profile.display_name|default:request.user.email }}
+        </span>
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="{% url 'customers:create' %}" class="btn btn-outline btn-sm">
+        + Customer
+      </a>
+      <a href="{% url 'projects:create' %}" class="btn btn-outline btn-sm">
+        + Project
+      </a>
+      <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary btn-sm">
+        + Invoice
+      </a>
+    </div>
+  </div>
+
+  <!-- Metric cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    {% for metric in metrics %}
+    <a href="{% url metric.url_name %}" class="card bg-base-100 shadow-sm border border-base-300 hover:shadow-md transition-shadow">
+      <div class="card-body p-5">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-sm text-base-content/60 font-medium">{{ metric.label }}</p>
+            <p class="text-2xl font-extrabold mt-1 text-base-content">{{ metric.value }}</p>
+          </div>
+          <span class="text-2xl" aria-hidden="true">{{ metric.icon }}</span>
+        </div>
+        <p class="text-xs text-base-content/40 mt-2">{{ metric.description }} &rarr;</p>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if not has_customers %}
+  <!-- Empty onboarding state -->
+  <div class="card bg-base-100 border border-dashed border-base-300 shadow-none">
+    <div class="card-body items-center text-center py-16">
+      <div class="text-5xl mb-4" aria-hidden="true">🎨</div>
+      <h2 class="card-title text-2xl text-base-content">Welcome to your art workspace!</h2>
+      <p class="text-base-content/60 max-w-md mt-2 text-sm">
+        Start by adding your first client or commissioner. You'll then be able to track projects, manage deliverables, and send private invoice payment links.
+      </p>
+      <div class="card-actions mt-6">
+        <a href="{% url 'customers:create' %}" class="btn btn-primary px-8">
+          Add your first customer
+        </a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <!-- Recent Activity Grids -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Recent Projects -->
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+      <div class="card-body p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold">Recent Commissions</h2>
+          <a href="{% url 'projects:list' %}" class="text-xs text-primary font-semibold hover:underline">View all</a>
+        </div>
+
+        {% if recent_projects %}
+        <div class="overflow-x-auto">
+          <table class="table table-sm w-full">
+            <tbody>
+              {% for p in recent_projects %}
+              <tr class="hover">
+                <td>
+                  <a href="{% url 'projects:detail' p.pk %}" class="font-semibold text-primary hover:underline">
+                    {{ p.title }}
+                  </a>
+                  <div class="text-xs text-base-content/50">{{ p.customer.name }}</div>
+                </td>
+                <td class="text-right">
+                  <span class="badge badge-xs
+                    {% if p.status == 'completed' %}badge-success
+                    {% elif p.status == 'in_progress' %}badge-info
+                    {% elif p.status == 'accepted' %}badge-primary
+                    {% else %}badge-neutral{% endif %}">
+                    {{ p.get_status_display }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-sm text-base-content/50 italic py-4">No active projects yet. <a href="{% url 'projects:create' %}" class="text-primary hover:underline">Create one</a>.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent Invoices -->
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+      <div class="card-body p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold">Recent Invoices</h2>
+          <a href="{% url 'billing:invoice_list' %}" class="text-xs text-primary font-semibold hover:underline">View all</a>
+        </div>
+
+        {% if recent_invoices %}
+        <div class="overflow-x-auto">
+          <table class="table table-sm w-full">
+            <tbody>
+              {% for inv in recent_invoices %}
+              <tr class="hover">
+                <td>
+                  <a href="{% url 'billing:invoice_detail' inv.pk %}" class="font-mono font-semibold text-primary hover:underline">
+                    {{ inv.invoice_number }}
+                  </a>
+                  <div class="text-xs text-base-content/50">{{ inv.customer.name }}</div>
+                </td>
+                <td class="font-bold text-xs">{{ inv.total_amount }} {{ inv.currency }}</td>
+                <td class="text-right">
+                  <span class="badge badge-xs
+                    {% if inv.status == 'paid' %}badge-success
+                    {% elif inv.status == 'partially_paid' %}badge-info
+                    {% elif inv.status == 'issued' %}badge-primary
+                    {% elif inv.status == 'void' %}badge-ghost
+                    {% else %}badge-neutral{% endif %}">
+                    {{ inv.get_status_display }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-sm text-base-content/50 italic py-4">No invoices yet. <a href="{% url 'billing:invoice_create' %}" class="text-primary hover:underline">Create an invoice draft</a>.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

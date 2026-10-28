@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Customers{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-bold">Customers</h1>
+      <p class="text-base-content/60 text-sm mt-1">Manage your clients, contact details, and their project history.</p>
+    </div>
+    <div>
+      <a href="{% url 'customers:create' %}" class="btn btn-primary gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Add customer
+      </a>
+    </div>
+  </div>
+
+  <!-- Search & Tabs -->
+  <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+    <div class="tabs tabs-boxed bg-base-100 p-1">
+      <a href="{% url 'customers:list' %}" class="tab {% if not show_archived %}tab-active font-semibold{% endif %}">
+        Active ({{ active_count }})
+      </a>
+      <a href="{% url 'customers:list' %}?archived=1" class="tab {% if show_archived %}tab-active font-semibold{% endif %}">
+        Archived ({{ archived_count }})
+      </a>
+    </div>
+
+    <form method="get" class="w-full md:w-80">
+      {% if show_archived %}<input type="hidden" name="archived" value="1">{% endif %}
+      <div class="join w-full">
+        <input
+          type="text"
+          name="q"
+          value="{{ query }}"
+          placeholder="Search by name, email, phone..."
+          class="input input-bordered join-item w-full"
+        />
+        <button type="submit" class="btn join-item btn-neutral">Search</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Customer Table / Cards -->
+  {% if customers %}
+  <div class="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full">
+        <thead>
+          <tr class="bg-base-200/50">
+            <th>Customer</th>
+            <th>Contact</th>
+            <th>Country</th>
+            <th>Active Projects</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for customer in customers %}
+          <tr class="hover">
+            <td>
+              <a href="{% url 'customers:detail' customer.pk %}" class="font-semibold text-primary hover:underline flex items-center gap-2">
+                <span class="avatar placeholder">
+                  <span class="bg-primary/10 text-primary rounded-full w-8 h-8 flex items-center justify-center font-bold text-xs">
+                    {{ customer.name|first|upper }}
+                  </span>
+                </span>
+                {{ customer.name }}
+              </a>
+              {% if customer.is_archived %}
+                <span class="badge badge-warning badge-sm ml-2">Archived</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="text-sm">
+                {% if customer.email %}<div>{{ customer.email }}</div>{% endif %}
+                {% if customer.phone_number %}<div class="text-base-content/60 text-xs">{{ customer.phone_number }}</div>{% endif %}
+                {% if not customer.email and not customer.phone_number %}<span class="text-base-content/40 text-xs">No contact details</span>{% endif %}
+              </div>
+            </td>
+            <td class="text-sm">{{ customer.country|default:"—" }}</td>
+            <td>
+              <span class="badge badge-ghost badge-sm">{{ customer.projects.count }}</span>
+            </td>
+            <td class="text-right">
+              <div class="join">
+                <a href="{% url 'customers:detail' customer.pk %}" class="btn btn-ghost btn-xs">View</a>
+                <a href="{% url 'customers:edit' customer.pk %}" class="btn btn-ghost btn-xs">Edit</a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card bg-base-100 shadow-sm border border-base-200 p-12 text-center">
+    <div class="max-w-md mx-auto space-y-4">
+      <div class="text-5xl">👥</div>
+      <h3 class="text-xl font-bold">
+        {% if query %}No customers found for "{{ query }}"{% elif show_archived %}No archived customers{% else %}No customers yet{% endif %}
+      </h3>
+      <p class="text-base-content/60 text-sm">
+        {% if query %}Try adjusting your search criteria.{% elif show_archived %}Customers you archive will show up here.{% else %}Add your first client to start creating projects and issuing invoices.{% endif %}
+      </p>
+      {% if not query and not show_archived %}
+      <div class="pt-2">
+        <a href="{% url 'customers:create' %}" class="btn btn-primary">Add your first customer</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

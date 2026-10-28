@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.title }} — Projects{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Breadcrumbs -->
+  <div class="text-sm breadcrumbs">
+    <ul>
+      <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li><a href="{% url 'projects:list' %}">Projects</a></li>
+      <li>{{ project.title }}</li>
+    </ul>
+  </div>
+
+  <!-- Header Card -->
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold">{{ project.title }}</h1>
+            <span class="badge 
+              {% if project.status == 'completed' %}badge-success text-success-content
+              {% elif project.status == 'in_progress' %}badge-info text-info-content
+              {% elif project.status == 'accepted' %}badge-primary text-primary-content
+              {% elif project.status == 'on_hold' %}badge-warning text-warning-content
+              {% elif project.status == 'cancelled' %}badge-ghost
+              {% else %}badge-neutral{% endif %}">
+              {{ project.get_status_display }}
+            </span>
+          </div>
+          <p class="text-base-content/60 text-sm mt-1">
+            Client: <a href="{% url 'customers:detail' project.customer.pk %}" class="text-primary font-semibold hover:underline">{{ project.customer.name }}</a>
+            &bull; Created {{ project.created_at|date:"M j, Y" }}
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Status Changer Form -->
+          <form method="post" action="{% url 'projects:status_update' project.pk %}" class="flex items-center gap-1">
+            {% csrf_token %}
+            <select name="status" class="select select-bordered select-sm" onchange="this.form.submit()">
+              {% for code, label in statuses %}
+              <option value="{{ code }}" {% if project.status == code %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </form>
+
+          <a href="{% url 'projects:edit' project.pk %}" class="btn btn-outline btn-sm">
+            Edit
+          </a>
+          <a href="{% url 'billing:invoice_create' %}?customer={{ project.customer.pk }}&project={{ project.pk }}" class="btn btn-primary btn-sm">
+            + Invoice
+          </a>
+        </div>
+      </div>
+
+      <div class="divider my-4"></div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+        <div>
+          <span class="text-base-content/50 block text-xs uppercase font-semibold">Agreed Budget</span>
+          <span class="font-bold text-base">
+            {% if project.agreed_amount %}{{ project.agreed_amount }} {{ project.currency }}{% else %}Not specified{% endif %}
+          </span>
+        </div>
+        <div>
+          <span class="text-base-content/50 block text-xs uppercase font-semibold">Due Date</span>
+          <span class="font-bold text-base">{{ project.due_date|default:"Flexible / None" }}</span>
+        </div>
+        <div>
+          <span class="text-base-content/50 block text-xs uppercase font-semibold">Completion</span>
+          <span class="font-bold text-base">
+            {% if project.completed_at %}{{ project.completed_at|date:"M j, Y" }}{% else %}In progress{% endif %}
+          </span>
+        </div>
+      </div>
+
+      {% if project.description %}
+      <div class="mt-4 p-4 bg-base-200/50 rounded-lg text-sm">
+        <span class="text-base-content/50 block text-xs uppercase font-semibold mb-1">Commission Brief</span>
+        <p class="whitespace-pre-line">{{ project.description }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Invoices associated with this project -->
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold">Invoices & Milestones ({{ invoices.count }})</h2>
+        <a href="{% url 'billing:invoice_create' %}?customer={{ project.customer.pk }}&project={{ project.pk }}" class="btn btn-ghost btn-sm text-primary">
+          + Bill for this project
+        </a>
+      </div>
+
+      {% if invoices %}
+      <div class="overflow-x-auto">
+        <table class="table table-zebra w-full text-sm">
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Issue Date</th>
+              <th>Status</th>
+              <th>Total</th>
+              <th>Balance Due</th>
+              <th class="text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invoice in invoices %}
+            <tr>
+              <td class="font-semibold">
+                <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="hover:underline text-primary">
+                  {{ invoice.invoice_number }}
+                </a>
+              </td>
+              <td>{{ invoice.issue_date|date:"M j, Y" }}</td>
+              <td>
+                <span class="badge badge-sm
+                  {% if invoice.status == 'paid' %}badge-success text-success-content
+                  {% elif invoice.status == 'partially_paid' %}badge-info text-info-content
+                  {% elif invoice.status == 'issued' %}badge-primary text-primary-content
+                  {% elif invoice.status == 'void' %}badge-ghost
+                  {% else %}badge-neutral{% endif %}">
+                  {{ invoice.get_status_display }}
+                </span>
+              </td>
+              <td class="font-semibold">{{ invoice.total_amount }} {{ invoice.currency }}</td>
+              <td class="font-semibold {% if invoice.balance_due > 0 %}text-warning{% else %}text-success{% endif %}">
+                {{ invoice.balance_due }} {{ invoice.currency }}
+              </td>
+              <td class="text-right">
+                <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-ghost btn-xs">View</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-base-content/50 text-sm italic">No invoices created for this project yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

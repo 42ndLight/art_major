@@ -1,0 +1,98 @@
+{% extends "base_public.html" %}
+
+{% block title %}Pay Invoice {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-6">
+
+  <!-- Breadcrumbs -->
+  <div class="text-sm">
+    <a href="{% url 'billing:public_invoice' token=token %}" class="text-primary hover:underline flex items-center gap-1">
+      &larr; Back to Invoice
+    </a>
+  </div>
+
+  <div class="card bg-base-100 shadow-md border border-base-200">
+    <div class="card-body p-6 sm:p-8 space-y-6">
+
+      <!-- Header -->
+      <div class="border-b border-base-200 pb-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-bold">Make Payment</h2>
+          <span class="badge badge-warning badge-sm">Demo Sandbox Stub</span>
+        </div>
+        <p class="text-sm text-base-content/60 mt-1">
+          Paying <strong class="text-base-content">{{ invoice.artist.artist_profile.business_name|default:invoice.artist.artist_profile.display_name|default:invoice.artist.email }}</strong> for invoice <span class="font-mono">{{ invoice.invoice_number }}</span>.
+        </p>
+      </div>
+
+      <!-- Balance Callout -->
+      <div class="bg-base-200/50 p-4 rounded-lg flex items-center justify-between">
+        <div>
+          <span class="text-xs uppercase font-bold text-base-content/50 block">Outstanding Balance</span>
+          <span class="text-2xl font-extrabold text-primary">{{ invoice.balance_due }} {{ invoice.currency }}</span>
+        </div>
+        <div class="text-right text-xs text-base-content/60">
+          <div>Total: {{ invoice.total_amount }} {{ invoice.currency }}</div>
+          <div>Paid: {{ invoice.amount_paid }} {{ invoice.currency }}</div>
+        </div>
+      </div>
+
+      <!-- Payment Form -->
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+
+        <!-- Payment Amount -->
+        <div class="form-control">
+          <label class="label pb-1">
+            <span class="label-text font-medium">Payment Amount ({{ invoice.currency }})</span>
+          </label>
+          <div class="relative">
+            <input
+              type="number"
+              name="amount"
+              step="0.01"
+              min="0.01"
+              max="{{ invoice.balance_due }}"
+              value="{{ suggested_amount }}"
+              required
+              class="input input-bordered w-full font-bold text-lg"
+            />
+          </div>
+          <label class="label pt-1">
+            <span class="label-text-alt text-base-content/50">You can pay the full remaining balance or enter a custom deposit.</span>
+          </label>
+        </div>
+
+        <!-- Payment Method Selection -->
+        <div class="form-control">
+          <label class="label pb-1">
+            <span class="label-text font-medium">Select Payment Method</span>
+          </label>
+          <select name="payment_method" class="select select-bordered w-full">
+            <option value="Credit Card (Demo Simulator)" selected>💳 Credit Card (Demo Simulator)</option>
+            <option value="Mobile Money / M-Pesa (Demo Simulator)">📱 Mobile Money / M-Pesa (Demo Simulator)</option>
+            <option value="Direct Bank Transfer (Demo Simulator)">🏦 Direct Bank Transfer (Demo Simulator)</option>
+          </select>
+        </div>
+
+        <!-- Demo Notice Box -->
+        <div class="p-3 bg-warning/10 border border-warning/30 rounded-lg text-xs text-warning-content flex gap-2 items-start">
+          <span class="text-lg">ℹ️</span>
+          <div>
+            <strong>Stage 2 Sandbox Mode:</strong> Real payment provider keys are locked pending country/provider research in Stage 3. Submitting will simulate a verified, idempotent transaction event and issue an official receipt.
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" class="btn btn-primary w-full text-base">
+            Complete Demo Payment &rarr;
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_create %}New Invoice Draft{% else %}Edit Invoice {{ invoice.invoice_number }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- Breadcrumbs -->
+  <div class="text-sm breadcrumbs">
+    <ul>
+      <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li><a href="{% url 'billing:invoice_list' %}">Invoices</a></li>
+      {% if not is_create %}
+      <li><a href="{% url 'billing:invoice_detail' invoice.pk %}">{{ invoice.invoice_number }}</a></li>
+      <li>Edit Draft</li>
+      {% else %}
+      <li>New Draft</li>
+      {% endif %}
+    </ul>
+  </div>
+
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-6 sm:p-8">
+      <h2 class="card-title text-2xl font-bold mb-1">
+        {% if is_create %}New Invoice Draft{% else %}Edit Invoice {{ invoice.invoice_number }}{% endif %}
+      </h2>
+      <p class="text-base-content/60 text-sm mb-6">
+        Fill out client, project, dates, and itemized lines. Totals will be calculated automatically upon saving.
+      </p>
+
+      <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Client & Project -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="form-control">
+            <label class="label pb-1" for="{{ form.customer.id_for_label }}">
+              <span class="label-text font-medium">Customer <span class="text-error">*</span></span>
+            </label>
+            {{ form.customer }}
+            {% if form.customer.errors %}
+            <div class="label"><span class="label-text-alt text-error">{{ form.customer.errors|join:", " }}</span></div>
+            {% endif %}
+          </div>
+
+          <div class="form-control">
+            <label class="label pb-1" for="{{ form.project.id_for_label }}">
+              <span class="label-text font-medium">Linked Project / Commission (optional)</span>
+            </label>
+            {{ form.project }}
+            {% if form.project.errors %}
+            <div class="label"><span class="label-text-alt text-error">{{ form.project.errors|join:", " }}</span></div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Invoice Number, Currency, Dates -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div class="form-control">
+            <label class="label pb-1" for="{{ form.invoice_number.id_for_label }}">
+              <span class="label-text font-medium">Invoice Number <span class="text-error">*</span></span>
+            </label>
+            {{ form.invoice_number }}
+            {% if form.invoice_number.errors %}
+            <div class="label"><span class="label-text-alt text-error">{{ form.invoice_number.errors|join:", " }}</span></div>
+            {% endif %}
+          </div>
+
+          <div class="form-control">
+            <label class="label pb-1" for="{{ form.currency.id_for_label }}">
+              <span class="label-text font-medium">Currency <span class="text-error">*</span></span>
+            </label>
+            {{ form.currency }}
+            {% if form.currency.errors %}
+            <div class="label"><span class="label-text-alt text-error">{{ form.currency.errors|join:", " }}</span></div>
+            {% endif %}
+          </div>
+
+          <div class="form-control">
+            <label class="label pb-1" for="{{ form.issue_date.id_for_label }}">
+              <span class="label-text font-medium">Issue Date</span>
+            </label>
+            {{ form.issue_date }}
+            {% if form.issue_date.errors %}
+            <div class="label"><span class="label-text-alt text-error">{{ form.issue_date.errors|join:", " }}</span></div>
+            {% endif %}
+          </div>
+
+          <div class="form-control">
+            <label class="label pb-1" for="{{ form.due_date.id_for_label }}">
+              <span class="label-text font-medium">Due Date</span>
+            </label>
+            {{ form.due_date }}
+            {% if form.due_date.errors %}
+            <div class="label"><span class="label-text-alt text-error">{{ form.due_date.errors|join:", " }}</span></div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="divider my-2">Line Items</div>
+
+        <!-- Line items formset -->
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}
+        <div class="alert alert-error text-sm">
+          <span>{{ formset.non_form_errors|join:", " }}</span>
+        </div>
+        {% endif %}
+
+        <div class="space-y-3">
+          {% for line_form in formset %}
+          <div class="p-3 bg-base-200/50 rounded-lg flex flex-col md:flex-row gap-3 items-end">
+            {{ line_form.id }}
+            <div class="flex-1 w-full">
+              <label class="label pb-1"><span class="label-text text-xs font-semibold">Description</span></label>
+              {{ line_form.description }}
+              {% if line_form.description.errors %}
+              <span class="text-error text-xs">{{ line_form.description.errors|join:", " }}</span>
+              {% endif %}
+            </div>
+            <div class="w-full md:w-28">
+              <label class="label pb-1"><span class="label-text text-xs font-semibold">Quantity</span></label>
+              {{ line_form.quantity }}
+              {% if line_form.quantity.errors %}
+              <span class="text-error text-xs">{{ line_form.quantity.errors|join:", " }}</span>
+              {% endif %}
+            </div>
+            <div class="w-full md:w-36">
+              <label class="label pb-1"><span class="label-text text-xs font-semibold">Unit Price</span></label>
+              {{ line_form.unit_price }}
+              {% if line_form.unit_price.errors %}
+              <span class="text-error text-xs">{{ line_form.unit_price.errors|join:", " }}</span>
+              {% endif %}
+            </div>
+            {% if formset.can_delete and line_form.instance.pk %}
+            <div class="pb-1">
+              <label class="cursor-pointer label gap-1 text-xs text-error">
+                {{ line_form.DELETE }}
+                <span>Delete</span>
+              </label>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Discount & Notes -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+          <div class="form-control">
+            <label class="label pb-1" for="{{ form.discount_amount.id_for_label }}">
+              <span class="label-text font-medium">Discount Amount (optional)</span>
+            </label>
+            {{ form.discount_amount }}
+            {% if form.discount_amount.errors %}
+            <div class="label"><span class="label-text-alt text-error">{{ form.discount_amount.errors|join:", " }}</span></div>
+            {% endif %}
+          </div>
+
+          <div class="form-control">
+            <label class="label pb-1" for="{{ form.notes.id_for_label }}">
+              <span class="label-text font-medium">Notes & Payment Terms</span>
+            </label>
+            {{ form.notes }}
+            {% if form.notes.errors %}
+            <div class="label"><span class="label-text-alt text-error">{{ form.notes.errors|join:", " }}</span></div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="pt-6 flex items-center justify-end gap-3 border-t border-base-200">
+          <a href="{% if not is_create %}{% url 'billing:invoice_detail' invoice.pk %}{% else %}{% url 'billing:invoice_list' %}{% endif %}" class="btn btn-ghost">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-primary px-8">
+            {% if is_create %}Save Draft{% else %}Save Changes{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

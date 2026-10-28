@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}Edit {{ object.name }}{% else %}Add Customer{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <!-- Breadcrumbs -->
+  <div class="text-sm breadcrumbs">
+    <ul>
+      <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li><a href="{% url 'customers:list' %}">Customers</a></li>
+      {% if object %}
+      <li><a href="{% url 'customers:detail' object.pk %}">{{ object.name }}</a></li>
+      <li>Edit</li>
+      {% else %}
+      <li>New</li>
+      {% endif %}
+    </ul>
+  </div>
+
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-6 sm:p-8">
+      <h2 class="card-title text-2xl font-bold mb-1">
+        {% if object %}Edit Customer{% else %}Add New Customer{% endif %}
+      </h2>
+      <p class="text-base-content/60 text-sm mb-6">Record contact information and notes for this client.</p>
+
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+
+        <!-- Name -->
+        <div class="form-control">
+          <label class="label pb-1" for="{{ form.name.id_for_label }}">
+            <span class="label-text font-medium">Customer or Business Name <span class="text-error">*</span></span>
+          </label>
+          {{ form.name }}
+          {% if form.name.errors %}
+          <div class="label"><span class="label-text-alt text-error">{{ form.name.errors|join:", " }}</span></div>
+          {% endif %}
+        </div>
+
+        <!-- Email & Phone Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="form-control">
+            <label class="label pb-1" for="{{ form.email.id_for_label }}">
+              <span class="label-text font-medium">Email address</span>
+            </label>
+            {{ form.email }}
+            {% if form.email.errors %}
+            <div class="label"><span class="label-text-alt text-error">{{ form.email.errors|join:", " }}</span></div>
+            {% endif %}
+          </div>
+
+          <div class="form-control">
+            <label class="label pb-1" for="{{ form.phone_number.id_for_label }}">
+              <span class="label-text font-medium">Phone number</span>
+            </label>
+            {{ form.phone_number }}
+            {% if form.phone_number.errors %}
+            <div class="label"><span class="label-text-alt text-error">{{ form.phone_number.errors|join:", " }}</span></div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Country -->
+        <div class="form-control">
+          <label class="label pb-1" for="{{ form.country.id_for_label }}">
+            <span class="label-text font-medium">Country</span>
+          </label>
+          {{ form.country }}
+          {% if form.country.errors %}
+          <div class="label"><span class="label-text-alt text-error">{{ form.country.errors|join:", " }}</span></div>
+          {% endif %}
+        </div>
+
+        <!-- Notes -->
+        <div class="form-control">
+          <label class="label pb-1" for="{{ form.notes.id_for_label }}">
+            <span class="label-text font-medium">Notes & Brief info</span>
+          </label>
+          {{ form.notes }}
+          {% if form.notes.errors %}
+          <div class="label"><span class="label-text-alt text-error">{{ form.notes.errors|join:", " }}</span></div>
+          {% endif %}
+        </div>
+
+        <div class="pt-4 flex items-center justify-end gap-3">
+          <a href="{% if object %}{% url 'customers:detail' object.pk %}{% else %}{% url 'customers:list' %}{% endif %}" class="btn btn-ghost">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-primary px-6">
+            {% if object %}Save changes{% else %}Add customer{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

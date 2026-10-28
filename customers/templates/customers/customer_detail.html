@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}{{ customer.name }} — Customers{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Breadcrumbs -->
+  <div class="text-sm breadcrumbs">
+    <ul>
+      <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li><a href="{% url 'customers:list' %}">Customers</a></li>
+      <li>{{ customer.name }}</li>
+    </ul>
+  </div>
+
+  <!-- Header Card -->
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="avatar placeholder">
+            <div class="bg-primary text-primary-content rounded-full w-14 h-14 text-xl font-bold">
+              {{ customer.name|first|upper }}
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-2xl font-bold">{{ customer.name }}</h1>
+              {% if customer.is_archived %}
+              <span class="badge badge-warning badge-sm">Archived</span>
+              {% endif %}
+            </div>
+            <p class="text-base-content/60 text-sm mt-0.5">
+              Customer since {{ customer.created_at|date:"M j, Y" }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="{% url 'customers:edit' customer.pk %}" class="btn btn-outline btn-sm">
+            Edit Details
+          </a>
+          <a href="{% url 'projects:create' %}?customer={{ customer.pk }}" class="btn btn-outline btn-sm">
+            + Project
+          </a>
+          <a href="{% url 'billing:invoice_create' %}?customer={{ customer.pk }}" class="btn btn-primary btn-sm">
+            + Invoice
+          </a>
+
+          <form method="post" action="{% url 'customers:archive' customer.pk %}" class="inline">
+            {% csrf_token %}
+            {% if customer.is_archived %}
+            <button type="submit" class="btn btn-ghost btn-sm text-info">Restore</button>
+            {% else %}
+            <button type="submit" class="btn btn-ghost btn-sm text-warning" onclick="return confirm('Archive this customer? Their invoices and projects will remain preserved.');">Archive</button>
+            {% endif %}
+          </form>
+        </div>
+      </div>
+
+      <!-- Info Details -->
+      <div class="divider my-4"></div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+        <div>
+          <span class="text-base-content/50 block text-xs uppercase font-semibold">Email</span>
+          <span class="font-medium">{{ customer.email|default:"None provided" }}</span>
+        </div>
+        <div>
+          <span class="text-base-content/50 block text-xs uppercase font-semibold">Phone</span>
+          <span class="font-medium">{{ customer.phone_number|default:"None provided" }}</span>
+        </div>
+        <div>
+          <span class="text-base-content/50 block text-xs uppercase font-semibold">Country</span>
+          <span class="font-medium">{{ customer.country|default:"None specified" }}</span>
+        </div>
+      </div>
+
+      {% if customer.notes %}
+      <div class="mt-4 p-3 bg-base-200/50 rounded-lg text-sm">
+        <span class="text-base-content/50 block text-xs uppercase font-semibold mb-1">Notes</span>
+        <p class="whitespace-pre-line">{{ customer.notes }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Projects Section -->
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold">Projects & Commissions ({{ projects.count }})</h2>
+        <a href="{% url 'projects:create' %}?customer={{ customer.pk }}" class="btn btn-ghost btn-sm text-primary">
+          + New project
+        </a>
+      </div>
+
+      {% if projects %}
+      <div class="overflow-x-auto">
+        <table class="table table-zebra w-full text-sm">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Agreed Amount</th>
+              <th>Due Date</th>
+              <th class="text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for project in projects %}
+            <tr>
+              <td class="font-semibold">
+                <a href="{% url 'projects:detail' project.pk %}" class="hover:underline text-primary">
+                  {{ project.title }}
+                </a>
+              </td>
+              <td>
+                <span class="badge badge-sm 
+                  {% if project.status == 'completed' %}badge-success text-success-content
+                  {% elif project.status == 'in_progress' %}badge-info text-info-content
+                  {% elif project.status == 'accepted' %}badge-primary text-primary-content
+                  {% elif project.status == 'cancelled' %}badge-ghost
+                  {% else %}badge-neutral{% endif %}">
+                  {{ project.get_status_display }}
+                </span>
+              </td>
+              <td>
+                {% if project.agreed_amount %}{{ project.agreed_amount }} {{ project.currency }}{% else %}—{% endif %}
+              </td>
+              <td>{{ project.due_date|default:"—" }}</td>
+              <td class="text-right">
+                <a href="{% url 'projects:detail' project.pk %}" class="btn btn-ghost btn-xs">View</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-base-content/50 text-sm italic">No projects yet for this client.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Invoices Section -->
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold">Invoices ({{ invoices.count }})</h2>
+        <a href="{% url 'billing:invoice_create' %}?customer={{ customer.pk }}" class="btn btn-ghost btn-sm text-primary">
+          + New invoice
+        </a>
+      </div>
+
+      {% if invoices %}
+      <div class="overflow-x-auto">
+        <table class="table table-zebra w-full text-sm">
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Issue Date</th>
+              <th>Status</th>
+              <th>Total</th>
+              <th>Balance Due</th>
+              <th class="text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invoice in invoices %}
+            <tr>
+              <td class="font-semibold">
+                <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="hover:underline text-primary">
+                  {{ invoice.invoice_number }}
+                </a>
+              </td>
+              <td>{{ invoice.issue_date|date:"M j, Y" }}</td>
+              <td>
+                <span class="badge badge-sm
+                  {% if invoice.status == 'paid' %}badge-success text-success-content
+                  {% elif invoice.status == 'partially_paid' %}badge-info text-info-content
+                  {% elif invoice.status == 'issued' %}badge-primary text-primary-content
+                  {% elif invoice.status == 'void' %}badge-ghost
+                  {% else %}badge-neutral{% endif %}">
+                  {{ invoice.get_status_display }}
+                </span>
+              </td>
+              <td class="font-semibold">{{ invoice.total_amount }} {{ invoice.currency }}</td>
+              <td class="font-semibold {% if invoice.balance_due > 0 %}text-warning{% else %}text-success{% endif %}">
+                {{ invoice.balance_due }} {{ invoice.currency }}
+              </td>
+              <td class="text-right">
+                <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-ghost btn-xs">View</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-base-content/50 text-sm italic">No invoices issued to this customer yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

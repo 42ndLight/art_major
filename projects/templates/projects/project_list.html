@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Projects — ArtMajor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-bold">Projects & Commissions</h1>
+      <p class="text-base-content/60 text-sm mt-1">Track commission status, deliverables, deadlines, and billings.</p>
+    </div>
+    <div>
+      <a href="{% url 'projects:create' %}" class="btn btn-primary gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        New project
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters & Search -->
+  <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+    <!-- Status Filter pills -->
+    <div class="flex flex-wrap gap-1">
+      <a href="{% url 'projects:list' %}"
+         class="btn btn-xs {% if not selected_status %}btn-neutral{% else %}btn-ghost{% endif %}">
+        All ({{ all_count }})
+      </a>
+      {% for code, label in statuses %}
+      <a href="{% url 'projects:list' %}?status={{ code }}{% if query %}&q={{ query }}{% endif %}"
+         class="btn btn-xs {% if selected_status == code %}btn-neutral{% else %}btn-ghost{% endif %}">
+        {{ label }}
+      </a>
+      {% endfor %}
+    </div>
+
+    <!-- Search box -->
+    <form method="get" class="w-full md:w-72">
+      {% if selected_status %}<input type="hidden" name="status" value="{{ selected_status }}">{% endif %}
+      <div class="join w-full">
+        <input
+          type="text"
+          name="q"
+          value="{{ query }}"
+          placeholder="Search projects or clients..."
+          class="input input-bordered input-sm join-item w-full"
+        />
+        <button type="submit" class="btn btn-sm join-item btn-neutral">Search</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Project List Table -->
+  {% if projects %}
+  <div class="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full text-sm">
+        <thead>
+          <tr class="bg-base-200/50">
+            <th>Project Title</th>
+            <th>Customer</th>
+            <th>Status</th>
+            <th>Agreed Amount</th>
+            <th>Due Date</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for project in projects %}
+          <tr class="hover">
+            <td>
+              <a href="{% url 'projects:detail' project.pk %}" class="font-bold text-primary hover:underline">
+                {{ project.title }}
+              </a>
+              {% if project.description %}
+              <div class="text-xs text-base-content/50 truncate max-w-xs">{{ project.description }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'customers:detail' project.customer.pk %}" class="hover:underline">
+                {{ project.customer.name }}
+              </a>
+            </td>
+            <td>
+              <span class="badge badge-sm
+                {% if project.status == 'completed' %}badge-success text-success-content
+                {% elif project.status == 'in_progress' %}badge-info text-info-content
+                {% elif project.status == 'accepted' %}badge-primary text-primary-content
+                {% elif project.status == 'on_hold' %}badge-warning text-warning-content
+                {% elif project.status == 'cancelled' %}badge-ghost
+                {% else %}badge-neutral{% endif %}">
+                {{ project.get_status_display }}
+              </span>
+            </td>
+            <td>
+              {% if project.agreed_amount %}
+              <span class="font-semibold">{{ project.agreed_amount }} {{ project.currency }}</span>
+              {% else %}
+              <span class="text-base-content/40">—</span>
+              {% endif %}
+            </td>
+            <td>{{ project.due_date|default:"—" }}</td>
+            <td class="text-right">
+              <div class="join">
+                <a href="{% url 'projects:detail' project.pk %}" class="btn btn-ghost btn-xs">View</a>
+                <a href="{% url 'projects:edit' project.pk %}" class="btn btn-ghost btn-xs">Edit</a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card bg-base-100 shadow-sm border border-base-200 p-12 text-center">
+    <div class="max-w-md mx-auto space-y-4">
+      <div class="text-5xl">🎨</div>
+      <h3 class="text-xl font-bold">
+        {% if query or selected_status %}No matching projects{% else %}No projects yet{% endif %}
+      </h3>
+      <p class="text-base-content/60 text-sm">
+        {% if query or selected_status %}Try clearing your filter or search keywords.{% else %}Create your first commission or project to organize briefs and invoice milestones.{% endif %}
+      </p>
+      {% if not query and not selected_status %}
+      <div class="pt-2">
+        <a href="{% url 'projects:create' %}" class="btn btn-primary">Create a project</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

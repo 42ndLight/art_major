@@ -32,12 +32,12 @@ Help independent commission-based artists keep client work and getting paid in o
 
 ## Stage 2 — Deliver the core workflow
 
-- [ ] Create and manage customers.
-- [ ] Create and update commissions/projects linked to customers.
-- [ ] Create invoice drafts with line items and server-calculated totals.
-- [ ] Issue an invoice and display it through a private, revocable customer link.
-- [ ] Show invoice state and record a payment only through the verified chosen flow (or clearly label a demo stub if payment research is incomplete).
-- [ ] Add a receipt/confirmation view only after payment evidence is verified.
+- [x] Create and manage customers.
+- [x] Create and update commissions/projects linked to customers.
+- [x] Create invoice drafts with line items and server-calculated totals.
+- [x] Issue an invoice and display it through a private, revocable customer link.
+- [x] Show invoice state and record a payment only through the verified chosen flow (or clearly label a demo stub if payment research is incomplete).
+- [x] Add a receipt/confirmation view only after payment evidence is verified.
 
 **Exit:** an artist can complete the core workflow with test data; customer links reveal only intended invoice details; one artist cannot access another artist's records.
 

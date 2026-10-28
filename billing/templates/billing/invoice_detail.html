@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice {{ invoice.invoice_number }} — ArtMajor{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-5xl mx-auto">
+
+  <!-- Breadcrumbs -->
+  <div class="text-sm breadcrumbs">
+    <ul>
+      <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li><a href="{% url 'billing:invoice_list' %}">Invoices</a></li>
+      <li>{{ invoice.invoice_number }}</li>
+    </ul>
+  </div>
+
+  <!-- Action Bar -->
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold font-mono">{{ invoice.invoice_number }}</h1>
+        <span class="badge 
+          {% if invoice.status == 'paid' %}badge-success text-success-content
+          {% elif invoice.status == 'partially_paid' %}badge-info text-info-content
+          {% elif invoice.status == 'issued' %}badge-primary text-primary-content
+          {% elif invoice.status == 'void' %}badge-ghost
+          {% else %}badge-neutral{% endif %}">
+          {{ invoice.get_status_display }}
+        </span>
+        {% if invoice.is_overdue %}
+        <span class="badge badge-error text-error-content badge-sm">Overdue</span>
+        {% endif %}
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        {% if invoice.status == 'draft' %}
+        <a href="{% url 'billing:invoice_edit' invoice.pk %}" class="btn btn-outline btn-sm">
+          Edit Draft
+        </a>
+        <form method="post" action="{% url 'billing:invoice_issue' invoice.pk %}" class="inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-sm">
+            🚀 Issue Invoice
+          </button>
+        </form>
+        {% elif invoice.status != 'void' %}
+          {% if invoice.balance_due > 0 %}
+          <label for="record-payment-modal" class="btn btn-outline btn-sm">
+            Record Payment
+          </label>
+          {% endif %}
+          <form method="post" action="{% url 'billing:invoice_void' invoice.pk %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-sm text-error" onclick="return confirm('Void this invoice? This will revoke the public link permanently.');">
+              Void
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Public Customer Share Link Alert (if issued) -->
+  {% if public_url and invoice.status != 'void' %}
+  <div class="alert alert-info shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+      </svg>
+      <div>
+        <div class="font-bold text-sm">Private Customer Invoice Link Ready</div>
+        <div class="text-xs opacity-90">Clients can view this invoice and submit payments without creating an account.</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 w-full md:w-auto">
+      <input type="text" readonly value="{{ public_url }}" id="publicUrlInput" class="input input-sm input-bordered bg-base-100 text-xs w-full md:w-72" />
+      <button onclick="navigator.clipboard.writeText(document.getElementById('publicUrlInput').value); alert('Private invoice link copied to clipboard!');" class="btn btn-sm btn-neutral shrink-0">
+        Copy Link
+      </button>
+      <a href="{{ public_url }}" target="_blank" class="btn btn-sm btn-ghost shrink-0">
+        Open ↗
+      </a>
+    </div>
+  </div>
+  {% elif invoice.status == 'void' %}
+  <div class="alert alert-warning shadow-sm">
+    <span>⚠️ This invoice has been marked as <strong>VOID</strong>. The private customer payment link is deactivated.</span>
+  </div>
+  {% endif %}
+
+  <!-- Invoice Sheet Display -->
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-8 space-y-6">
+
+      <!-- Header: Artist & Customer -->
+      <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b border-base-200 pb-6">
+        <div>
+          <h2 class="text-2xl font-bold">
+            {{ user.artist_profile.business_name|default:user.artist_profile.display_name|default:user.email }}
+          </h2>
+          <p class="text-sm text-base-content/60">{{ user.email }}</p>
+        </div>
+        <div class="text-right sm:text-right">
+          <span class="text-xs uppercase font-bold text-base-content/40 tracking-wider">Billed To</span>
+          <h3 class="text-lg font-bold">
+            <a href="{% url 'customers:detail' invoice.customer.pk %}" class="text-primary hover:underline">
+              {{ invoice.customer.name }}
+            </a>
+          </h3>
+          {% if invoice.customer.email %}<p class="text-xs text-base-content/70">{{ invoice.customer.email }}</p>{% endif %}
+          {% if invoice.customer.phone_number %}<p class="text-xs text-base-content/70">{{ invoice.customer.phone_number }}</p>{% endif %}
+          {% if invoice.customer.country %}<p class="text-xs text-base-content/70">{{ invoice.customer.country }}</p>{% endif %}
+        </div>
+      </div>
+
+      <!-- Dates & Metadata -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm bg-base-200/40 p-4 rounded-lg">
+        <div>
+          <span class="text-xs uppercase font-semibold text-base-content/50 block">Invoice Date</span>
+          <span class="font-medium">{{ invoice.issue_date|date:"M j, Y" }}</span>
+        </div>
+        <div>
+          <span class="text-xs uppercase font-semibold text-base-content/50 block">Due Date</span>
+          <span class="font-medium">{{ invoice.due_date|date:"M j, Y"|default:"Upon receipt" }}</span>
+        </div>
+        <div>
+          <span class="text-xs uppercase font-semibold text-base-content/50 block">Linked Project</span>
+          <span class="font-medium">
+            {% if invoice.project %}
+            <a href="{% url 'projects:detail' invoice.project.pk %}" class="text-primary hover:underline">
+              {{ invoice.project.title }}
+            </a>
+            {% else %}None{% endif %}
+          </span>
+        </div>
+        <div>
+          <span class="text-xs uppercase font-semibold text-base-content/50 block">Currency</span>
+          <span class="font-bold">{{ invoice.currency }}</span>
+        </div>
+      </div>
+
+      <!-- Line Items Table -->
+      <div class="overflow-x-auto">
+        <table class="table w-full text-sm">
+          <thead>
+            <tr class="border-b border-base-300">
+              <th>Description</th>
+              <th class="text-center w-24">Qty</th>
+              <th class="text-right w-32">Unit Price</th>
+              <th class="text-right w-32">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for line in lines %}
+            <tr class="border-b border-base-200">
+              <td class="font-medium">{{ line.description }}</td>
+              <td class="text-center">{{ line.quantity }}</td>
+              <td class="text-right">{{ line.unit_price }} {{ invoice.currency }}</td>
+              <td class="text-right font-semibold">{{ line.line_total }} {{ invoice.currency }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-base-content/40 py-4">No line items.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totals Breakdown -->
+      <div class="flex justify-end pt-2">
+        <div class="w-full sm:w-72 space-y-2 text-sm">
+          <div class="flex justify-between text-base-content/70">
+            <span>Subtotal</span>
+            <span>{{ invoice.subtotal }} {{ invoice.currency }}</span>
+          </div>
+          {% if invoice.discount_amount > 0 %}
+          <div class="flex justify-between text-error">
+            <span>Discount</span>
+            <span>-{{ invoice.discount_amount }} {{ invoice.currency }}</span>
+          </div>
+          {% endif %}
+          <div class="divider my-1"></div>
+          <div class="flex justify-between text-base font-bold">
+            <span>Total Amount</span>
+            <span>{{ invoice.total_amount }} {{ invoice.currency }}</span>
+          </div>
+          <div class="flex justify-between text-success font-semibold">
+            <span>Amount Paid</span>
+            <span>{{ invoice.amount_paid }} {{ invoice.currency }}</span>
+          </div>
+          <div class="flex justify-between text-lg font-extrabold {% if invoice.balance_due > 0 %}text-primary{% else %}text-success{% endif %} border-t border-base-300 pt-2">
+            <span>Balance Due</span>
+            <span>{{ invoice.balance_due }} {{ invoice.currency }}</span>
+          </div>
+        </div>
+      </div>
+
+      {% if invoice.notes %}
+      <div class="p-4 bg-base-200/40 rounded-lg text-sm">
+        <span class="text-xs uppercase font-semibold text-base-content/50 block mb-1">Notes & Terms</span>
+        <p class="whitespace-pre-line text-base-content/80">{{ invoice.notes }}</p>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Recorded Payments Table -->
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold">Payment History ({{ payments.count }})</h2>
+        {% if invoice.status != 'void' and invoice.balance_due > 0 %}
+        <label for="record-payment-modal" class="btn btn-outline btn-xs">
+          + Record Payment
+        </label>
+        {% endif %}
+      </div>
+
+      {% if payments %}
+      <div class="overflow-x-auto">
+        <table class="table table-zebra w-full text-sm">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Provider / Method</th>
+              <th>Reference</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for payment in payments %}
+            <tr>
+              <td>{{ payment.confirmed_at|date:"M j, Y, H:i"|default:payment.initiated_at|date:"M j, Y" }}</td>
+              <td>
+                <span class="font-medium">{{ payment.payment_method|default:payment.provider }}</span>
+                {% if payment.provider == 'demo_stub' %}
+                <span class="badge badge-warning badge-xs ml-1">Demo Stub</span>
+                {% endif %}
+              </td>
+              <td class="font-mono text-xs">{{ payment.provider_reference|default:payment.id }}</td>
+              <td class="font-bold text-success">{{ payment.amount }} {{ payment.currency }}</td>
+              <td>
+                <span class="badge badge-sm badge-success">{{ payment.get_status_display }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-base-content/50 text-sm italic">No payments recorded yet for this invoice.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Record Payment Modal -->
+{% if invoice.status != 'void' and invoice.balance_due > 0 %}
+<input type="checkbox" id="record-payment-modal" class="modal-toggle" />
+<div class="modal" role="dialog">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-2">Record a Payment</h3>
+    <p class="text-sm text-base-content/60 mb-4">
+      Log a manual payment received (cash, bank transfer, or other verified channel).
+    </p>
+
+    <form method="post" action="{% url 'billing:invoice_record_payment' invoice.pk %}" class="space-y-4">
+      {% csrf_token %}
+
+      <div class="form-control">
+        <label class="label pb-1"><span class="label-text font-medium">Amount ({{ invoice.currency }})</span></label>
+        {{ payment_form.amount }}
+      </div>
+
+      <div class="form-control">
+        <label class="label pb-1"><span class="label-text font-medium">Payment Method</span></label>
+        {{ payment_form.payment_method }}
+      </div>
+
+      <div class="form-control">
+        <label class="label pb-1"><span class="label-text font-medium">Transaction Notes / Reference</span></label>
+        {{ payment_form.notes }}
+      </div>
+
+      <div class="modal-action">
+        <label for="record-payment-modal" class="btn btn-ghost">Cancel</label>
+        <button type="submit" class="btn btn-primary">Confirm Payment</button>
+      </div>
+    </form>
+  </div>
+  <label class="modal-backdrop" for="record-payment-modal">Close</label>
+</div>
+{% endif %}
+
+{% endblock %}

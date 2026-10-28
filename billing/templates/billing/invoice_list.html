@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Invoices — ArtMajor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-bold">Invoices</h1>
+      <p class="text-base-content/60 text-sm mt-1">Issue itemized invoices, share customer payment links, and track balances.</p>
+    </div>
+    <div>
+      <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Create invoice
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters & Search -->
+  <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+    <div class="flex flex-wrap gap-1">
+      <a href="{% url 'billing:invoice_list' %}"
+         class="btn btn-xs {% if not selected_status %}btn-neutral{% else %}btn-ghost{% endif %}">
+        All ({{ all_count }})
+      </a>
+      {% for code, label in statuses %}
+      <a href="{% url 'billing:invoice_list' %}?status={{ code }}{% if query %}&q={{ query }}{% endif %}"
+         class="btn btn-xs {% if selected_status == code %}btn-neutral{% else %}btn-ghost{% endif %}">
+        {{ label }}
+      </a>
+      {% endfor %}
+    </div>
+
+    <form method="get" class="w-full md:w-72">
+      {% if selected_status %}<input type="hidden" name="status" value="{{ selected_status }}">{% endif %}
+      <div class="join w-full">
+        <input
+          type="text"
+          name="q"
+          value="{{ query }}"
+          placeholder="Search by #, client, project..."
+          class="input input-bordered input-sm join-item w-full"
+        />
+        <button type="submit" class="btn btn-sm join-item btn-neutral">Search</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Invoices Table -->
+  {% if invoices %}
+  <div class="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full text-sm">
+        <thead>
+          <tr class="bg-base-200/50">
+            <th>Invoice #</th>
+            <th>Customer</th>
+            <th>Project</th>
+            <th>Issue Date</th>
+            <th>Status</th>
+            <th>Total Amount</th>
+            <th>Balance Due</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for invoice in invoices %}
+          <tr class="hover">
+            <td>
+              <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="font-mono font-bold text-primary hover:underline">
+                {{ invoice.invoice_number }}
+              </a>
+            </td>
+            <td>
+              <a href="{% url 'customers:detail' invoice.customer.pk %}" class="hover:underline">
+                {{ invoice.customer.name }}
+              </a>
+            </td>
+            <td>
+              {% if invoice.project %}
+              <a href="{% url 'projects:detail' invoice.project.pk %}" class="text-xs text-base-content/70 hover:underline">
+                {{ invoice.project.title }}
+              </a>
+              {% else %}
+              <span class="text-base-content/40 text-xs">—</span>
+              {% endif %}
+            </td>
+            <td>{{ invoice.issue_date|date:"M j, Y" }}</td>
+            <td>
+              <span class="badge badge-sm
+                {% if invoice.status == 'paid' %}badge-success text-success-content
+                {% elif invoice.status == 'partially_paid' %}badge-info text-info-content
+                {% elif invoice.status == 'issued' %}badge-primary text-primary-content
+                {% elif invoice.status == 'void' %}badge-ghost
+                {% else %}badge-neutral{% endif %}">
+                {{ invoice.get_status_display }}
+              </span>
+            </td>
+            <td class="font-semibold">{{ invoice.total_amount }} {{ invoice.currency }}</td>
+            <td class="font-semibold {% if invoice.balance_due > 0 %}text-warning{% else %}text-success{% endif %}">
+              {{ invoice.balance_due }} {{ invoice.currency }}
+            </td>
+            <td class="text-right">
+              <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-ghost btn-xs">View</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card bg-base-100 shadow-sm border border-base-200 p-12 text-center">
+    <div class="max-w-md mx-auto space-y-4">
+      <div class="text-5xl">📄</div>
+      <h3 class="text-xl font-bold">
+        {% if query or selected_status %}No matching invoices{% else %}No invoices yet{% endif %}
+      </h3>
+      <p class="text-base-content/60 text-sm">
+        {% if query or selected_status %}Try clearing your filter or search keywords.{% else %}Create an itemized invoice draft, calculate line totals, and share a private payment link.{% endif %}
+      </p>
+      {% if not query and not selected_status %}
+      <div class="pt-2">
+        <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary">Create an invoice</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

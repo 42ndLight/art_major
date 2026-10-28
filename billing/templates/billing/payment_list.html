@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Payments — ArtMajor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-bold">Payments</h1>
+      <p class="text-base-content/60 text-sm mt-1">Audit log of all received customer transactions and settlement statuses.</p>
+    </div>
+  </div>
+
+  <!-- Payments Table -->
+  {% if payments %}
+  <div class="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full text-sm">
+        <thead>
+          <tr class="bg-base-200/50">
+            <th>Date & Time</th>
+            <th>Customer</th>
+            <th>Invoice</th>
+            <th>Method / Provider</th>
+            <th>Reference</th>
+            <th>Amount</th>
+            <th class="text-right">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for payment in payments %}
+          <tr class="hover">
+            <td>{{ payment.confirmed_at|date:"M j, Y, H:i"|default:payment.initiated_at|date:"M j, Y, H:i" }}</td>
+            <td>
+              <a href="{% url 'customers:detail' payment.invoice.customer.pk %}" class="font-medium hover:underline">
+                {{ payment.invoice.customer.name }}
+              </a>
+            </td>
+            <td>
+              <a href="{% url 'billing:invoice_detail' payment.invoice.pk %}" class="font-mono text-primary hover:underline">
+                {{ payment.invoice.invoice_number }}
+              </a>
+            </td>
+            <td>
+              <span class="font-medium">{{ payment.payment_method|default:payment.provider }}</span>
+              {% if payment.provider == 'demo_stub' %}
+              <span class="badge badge-warning badge-xs ml-1">Demo Stub</span>
+              {% endif %}
+            </td>
+            <td class="font-mono text-xs">{{ payment.provider_reference|default:payment.id }}</td>
+            <td class="font-bold text-success">{{ payment.amount }} {{ payment.currency }}</td>
+            <td class="text-right">
+              <span class="badge badge-sm
+                {% if payment.status == 'succeeded' %}badge-success text-success-content
+                {% elif payment.status == 'pending' %}badge-warning text-warning-content
+                {% elif payment.status == 'refunded' %}badge-info text-info-content
+                {% else %}badge-error text-error-content{% endif %}">
+                {{ payment.get_status_display }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card bg-base-100 shadow-sm border border-base-200 p-12 text-center">
+    <div class="max-w-md mx-auto space-y-4">
+      <div class="text-5xl">💳</div>
+      <h3 class="text-xl font-bold">No payments recorded yet</h3>
+      <p class="text-base-content/60 text-sm">
+        When clients settle invoices via their private payment link or when you log manual payments, records appear here.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
