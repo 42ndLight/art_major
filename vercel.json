@@ -1,0 +1,11 @@
+{
+  "buildCommand": "./build.sh",
+  "outputDirectory": ".",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "artmajor/wsgi.py"
+    }
+  ]
+}
