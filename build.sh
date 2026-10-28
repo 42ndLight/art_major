@@ -4,9 +4,6 @@ set -o errexit
 
 echo "Building project..."
 
-# Install dependencies if needed (Vercel usually handles this via requirements.txt, but good to ensure)
-pip install -r requirements.txt
-
 # Collect static files
 python manage.py collectstatic --no-input
 
