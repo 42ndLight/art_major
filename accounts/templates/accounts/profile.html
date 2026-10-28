@@ -107,6 +107,19 @@
           {% endif %}
         </div>
 
+        <div class="form-control mb-8">
+          <label class="label pb-1" for="{{ form.phone_number.id_for_label }}">
+            <span class="label-text font-medium">Phone number for SMS commands</span>
+          </label>
+          <input type="tel" id="{{ form.phone_number.id_for_label }}" name="{{ form.phone_number.html_name }}"
+            value="{{ form.phone_number.value|default:'' }}" placeholder="+254712345678"
+            class="input input-bordered w-full {% if form.phone_number.errors %}input-error{% endif %}" />
+          <p class="text-sm text-base-content/60 mt-2">Use international format. Changing this number removes its verified status.</p>
+          {% if profile.sms_phone_verified %}
+          <p class="text-sm text-success mt-2">Verified for inbound SMS commands.</p>
+          {% endif %}
+        </div>
+
         <!-- Non-field errors -->
         {% if form.non_field_errors %}
         <div class="alert alert-error mb-4">
@@ -119,6 +132,30 @@
           <a href="{% url 'dashboard' %}" class="btn btn-ghost">Cancel</a>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow-sm border border-base-300 mt-4">
+    <div class="card-body p-6">
+      <h2 class="card-title text-lg">Verify SMS number</h2>
+      <p class="text-sm text-base-content/60">Verification links your number to your artist account. Commands from unverified numbers are ignored.</p>
+      <form method="post" class="flex flex-wrap gap-3 items-end mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="send_sms_code" />
+        <input type="hidden" name="phone_number" value="{{ profile.phone_number }}" />
+        <button type="submit" class="btn btn-outline btn-primary" {% if not profile.phone_number or profile.sms_phone_verified %}disabled{% endif %}>Send verification code</button>
+      </form>
+      {% if profile.sms_verification_expires_at %}
+      <form method="post" class="flex flex-wrap gap-3 items-end mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="verify_sms_code" />
+        <label class="form-control">
+          <span class="label-text mb-1">6-digit code</span>
+          <input name="verification_code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" class="input input-bordered" required />
+        </label>
+        <button type="submit" class="btn btn-primary">Verify number</button>
+      </form>
+      {% endif %}
     </div>
   </div>
 

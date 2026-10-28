@@ -27,6 +27,9 @@ urlpatterns = [
     path("customers/", include("customers.urls")),
     path("projects/", include("projects.urls")),
 
+    # Africa's Talking inbound SMS command webhook
+    path("", include("communications.urls")),
+
     # Billing (Invoices, Payments, Public Invoice & Receipts)
     path("", include("billing.urls")),
 

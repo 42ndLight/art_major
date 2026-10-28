@@ -95,14 +95,14 @@ After issue, avoid silently changing historical totals. Use a documented draft/e
 6. Receipt and transactional notification are queued/sent safely.
 7. Failed communication does not roll back the financial event.
 
-### Africa's Talking communication workflow (MVP requirement)
-1. Artist explicitly enables transactional SMS and provides/validates a customer phone number where needed.
-2. The app triggers an allowed message after events such as invoice issued, payment confirmed, or project update, based on consent and user preferences.
-3. A communication record stores recipient, purpose/template key, provider message ID if returned, status, timestamps, and redacted failure reason.
-4. Sandbox mode is used during development. Tests mock the provider and never send real SMS.
-5. If the SMS fails, the invoice/payment workflow remains valid and the artist can see the failure or retry safely.
+### Africa's Talking SMS command workflow (implemented on feature-AT)
+1. Artist enters a phone number in profile settings and verifies ownership with a short-lived code sent through AT.
+2. AT posts inbound SMS to a public HTTPS webhook protected by a high-entropy URL token.
+3. The app deduplicates by provider message ID, identifies the artist only by verified sender number, parses a strict command, and creates an artist-scoped customer or invoice draft.
+4. The app replies to the artist. An SMS outage does not roll back a created record.
+5. SMS invoice commands create drafts only; issuing and payment remain explicit web actions.
 
-Do not add marketing campaigns to the MVP.
+Do not add marketing. Validate callback payload and delivery behavior against the configured AT sandbox before production.
 
 ### Artist — dashboard
 - Show summary values only from persisted, correctly scoped records.

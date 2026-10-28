@@ -109,11 +109,12 @@ class ProfileForm(forms.ModelForm):
 
     class Meta:
         model = ArtistProfile
-        fields = ["display_name", "business_name", "default_currency", "timezone"]
+        fields = ["display_name", "business_name", "default_currency", "timezone", "phone_number"]
         widgets = {
             "display_name": forms.TextInput(attrs={"placeholder": "Your public name"}),
             "business_name": forms.TextInput(attrs={"placeholder": "Studio or business name (optional)"}),
             "timezone": forms.TextInput(attrs={"placeholder": "e.g. Africa/Nairobi"}),
+            "phone_number": forms.TextInput(attrs={"placeholder": "+254712345678", "autocomplete": "tel"}),
         }
 
     default_currency = forms.ChoiceField(
