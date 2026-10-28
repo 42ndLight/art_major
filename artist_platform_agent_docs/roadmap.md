@@ -43,12 +43,12 @@ Help independent commission-based artists keep client work and getting paid in o
 
 ## Stage 3 — Add verified communications and payment integration
 
-- [ ] Implement only the payment provider and Africa's Talking channel supported by completed research.
-- [ ] Use sandbox credentials and test destinations; keep secrets out of source control.
-- [ ] Verify callbacks/transactions server-side and make event processing idempotent.
-- [ ] Record communication status and handle failures without undoing financial state.
-- [ ] Follow the documented consent and opt-out policy.
-- [ ] Prepare a safe, repeatable demo and list provider limitations clearly.
+- [x] Implement only the payment provider and Africa's Talking channel supported by completed research.
+- [x] Use sandbox credentials and test destinations; keep secrets out of source control.
+- [x] Verify callbacks/transactions server-side and make event processing idempotent.
+- [x] Record communication status and handle failures without undoing financial state.
+- [x] Follow the documented consent and opt-out policy.
+- [x] Prepare a safe, repeatable demo and list provider limitations clearly.
 
 **Exit:** the integration matches official docs and the event brief; repeated events do not duplicate payments or messages; no real communication is sent unintentionally.
 

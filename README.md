@@ -6,14 +6,14 @@ A Django-based platform for independent artists and creative studios to manage c
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Backend | Django 4.2+ |
-| Database | PostgreSQL |
+| Layer    | Technology                                   |
+| -------- | -------------------------------------------- |
+| Backend  | Django 4.2+                                  |
+| Database | PostgreSQL                                   |
 | Frontend | HTMX, Alpine.js, Tailwind CSS (CDN), daisyUI |
-| Auth | Email-based custom `User` model (UUID PK) |
-| Static | WhiteNoise |
-| Tests | pytest-django |
+| Auth     | Email-based custom `User` model (UUID PK)    |
+| Static   | WhiteNoise                                   |
+| Tests    | pytest-django                                |
 
 ---
 
@@ -40,6 +40,7 @@ pip install -r requirements.txt
 ```
 
 > **Note:** `dj-database-url` is also required for reading `DATABASE_URL`. Add it if not already listed:
+>
 > ```bash
 > pip install dj-database-url
 > ```
@@ -126,29 +127,29 @@ Tests use `pytest-django` and read settings from `artmajor.settings.local` (conf
 
 ## Makefile Commands
 
-| Command | Description |
-|---|---|
-| `make install` | Install Python dependencies |
-| `make migrate` | Run `python manage.py migrate` |
+| Command               | Description                           |
+| --------------------- | ------------------------------------- |
+| `make install`        | Install Python dependencies           |
+| `make migrate`        | Run `python manage.py migrate`        |
 | `make makemigrations` | Run `python manage.py makemigrations` |
-| `make run` | Start the development server |
-| `make test` | Run the test suite with pytest |
-| `make lint` | Run `python manage.py check` |
+| `make run`            | Start the development server          |
+| `make test`           | Run the test suite with pytest        |
+| `make lint`           | Run `python manage.py check`          |
 
 ---
 
 ## URL Map
 
-| URL | View | Auth required |
-|---|---|---|
-| `/` | Redirect to `/dashboard/` | — |
-| `/dashboard/` | DashboardView | ✅ |
-| `/accounts/signup/` | SignUpView | ❌ |
-| `/accounts/login/` | LoginView | ❌ |
-| `/accounts/logout/` | LogoutView (POST) | ✅ |
-| `/settings/profile/` | ProfileView | ✅ |
-| `/health/` | HealthView | ❌ |
-| `/admin/` | Django admin | Staff only |
+| URL                  | View                      | Auth required |
+| -------------------- | ------------------------- | ------------- |
+| `/`                  | Redirect to `/dashboard/` | —             |
+| `/dashboard/`        | DashboardView             | ✅            |
+| `/accounts/signup/`  | SignUpView                | ❌            |
+| `/accounts/login/`   | LoginView                 | ❌            |
+| `/accounts/logout/`  | LogoutView (POST)         | ✅            |
+| `/settings/profile/` | ProfileView               | ✅            |
+| `/health/`           | HealthView                | ❌            |
+| `/admin/`            | Django admin              | Staff only    |
 
 ---
 

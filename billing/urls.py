@@ -23,4 +23,5 @@ urlpatterns = [
     path("i/<str:token>/", views.PublicInvoiceView.as_view(), name="public_invoice"),
     path("i/<str:token>/pay/", views.PublicPaymentView.as_view(), name="public_payment"),
     path("receipt/<str:token>/", views.PublicReceiptView.as_view(), name="public_receipt"),
+    path("webhook/paystack/", views.PaystackWebhookView.as_view(), name="paystack_webhook"),
 ]

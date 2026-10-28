@@ -1,8 +1,5 @@
-{% extends "base_public.html" %}
-
-{% block title %}Invoice {{ invoice.invoice_number }}{% endblock %}
-
-{% block content %}
+{% extends "base_public.html" %} {% block title %}Invoice {{
+invoice.invoice_number }}{% endblock %} {% block content %}
 <div class="space-y-6">
 
   <!-- Status & Quick Action Banner -->
@@ -10,7 +7,7 @@
     <div>
       <div class="flex items-center gap-3">
         <h1 class="text-2xl font-bold font-mono">{{ invoice.invoice_number }}</h1>
-        <span class="badge 
+        <span class="badge
           {% if invoice.status == 'paid' %}badge-success text-success-content
           {% elif invoice.status == 'partially_paid' %}badge-info text-info-content
           {% else %}badge-primary text-primary-content{% endif %}">
@@ -43,95 +40,44 @@
       <!-- Header: From & To -->
       <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b border-base-200 pb-8">
         <div>
-          <span class="text-xs uppercase font-bold text-base-content/40 tracking-wider">From</span>
-          <h2 class="text-2xl font-bold mt-1">
-            {{ invoice.artist.artist_profile.business_name|default:invoice.artist.artist_profile.display_name|default:invoice.artist.email }}
-          </h2>
-          <p class="text-sm text-base-content/60 mt-0.5">{{ invoice.artist.email }}</p>
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-bold font-mono">
+                    {{ invoice.invoice_number }}
+                </h1>
+                <span
+                    class="badge {% if invoice.status == 'paid' %}badge-success text-success-content {% elif invoice.status == 'partially_paid' %}badge-info text-info-content {% else %}badge-primary text-primary-content{% endif %}"
+                >
+                    {{ invoice.get_status_display }}
+                </span>
+            </div>
+            <p class="text-sm text-base-content/60 mt-1">
+                Issued on {{ invoice.issue_date|date:"F j, Y" }} {% if
+                invoice.due_date %}&bull; Due on {{ invoice.due_date|date:"F j,
+                Y" }}{% endif %}
+            </p>
         </div>
 
-        <div class="sm:text-right">
-          <span class="text-xs uppercase font-bold text-base-content/40 tracking-wider">Billed To</span>
-          <h3 class="text-xl font-bold mt-1">{{ invoice.customer.name }}</h3>
-          {% if invoice.customer.email %}<p class="text-sm text-base-content/60">{{ invoice.customer.email }}</p>{% endif %}
-          {% if invoice.customer.country %}<p class="text-sm text-base-content/60">{{ invoice.customer.country }}</p>{% endif %}
+        <div>
+            {% if invoice.balance_due > 0 %}
+            <a
+                href="{% url 'billing:public_payment' token=token %}"
+                class="btn btn-primary px-8 gap-2"
+            >
+                <span
+                    >💳 Pay {{ invoice.balance_due }} {{ invoice.currency
+                    }}</span
+                >
+            </a>
+            {% else %}
+            <a
+                href="{% url 'billing:public_receipt' token=token %}"
+                class="btn btn-outline btn-success gap-2"
+            >
+                <span>View Payment Summary</span>
+            </a>
+            {% endif %}
         </div>
-      </div>
-
-      <!-- Linked Project Brief summary if present -->
-      {% if invoice.project %}
-      <div class="bg-base-200/50 p-4 rounded-lg text-sm">
-        <span class="text-xs uppercase font-bold text-base-content/50 block">Project / Commission</span>
-        <span class="font-bold text-base">{{ invoice.project.title }}</span>
-        {% if invoice.project.description %}
-        <p class="text-xs text-base-content/70 mt-1 whitespace-pre-line">{{ invoice.project.description }}</p>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      <!-- Itemized Table -->
-      <div class="overflow-x-auto">
-        <table class="table w-full">
-          <thead>
-            <tr class="border-b-2 border-base-300 text-sm">
-              <th>Description</th>
-              <th class="text-center w-24">Qty</th>
-              <th class="text-right w-36">Unit Price</th>
-              <th class="text-right w-36">Line Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for line in lines %}
-            <tr class="border-b border-base-200">
-              <td class="font-medium">{{ line.description }}</td>
-              <td class="text-center">{{ line.quantity }}</td>
-              <td class="text-right">{{ line.unit_price }} {{ invoice.currency }}</td>
-              <td class="text-right font-semibold">{{ line.line_total }} {{ invoice.currency }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Financial Summary -->
-      <div class="flex justify-end pt-4">
-        <div class="w-full sm:w-80 space-y-3 text-sm">
-          <div class="flex justify-between text-base-content/70">
-            <span>Subtotal</span>
-            <span>{{ invoice.subtotal }} {{ invoice.currency }}</span>
-          </div>
-          {% if invoice.discount_amount > 0 %}
-          <div class="flex justify-between text-error font-medium">
-            <span>Discount Applied</span>
-            <span>-{{ invoice.discount_amount }} {{ invoice.currency }}</span>
-          </div>
-          {% endif %}
-          <div class="divider my-1"></div>
-          <div class="flex justify-between text-lg font-bold">
-            <span>Total</span>
-            <span>{{ invoice.total_amount }} {{ invoice.currency }}</span>
-          </div>
-          <div class="flex justify-between text-success font-semibold">
-            <span>Amount Paid</span>
-            <span>{{ invoice.amount_paid }} {{ invoice.currency }}</span>
-          </div>
-          <div class="flex justify-between text-xl font-extrabold {% if invoice.balance_due > 0 %}text-primary{% else %}text-success{% endif %} border-t-2 border-base-300 pt-3">
-            <span>Balance Due</span>
-            <span>{{ invoice.balance_due }} {{ invoice.currency }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Notes / Terms -->
-      {% if invoice.notes %}
-      <div class="mt-8 p-4 bg-base-200/40 rounded-lg text-sm border-l-4 border-primary">
-        <span class="text-xs uppercase font-bold text-base-content/50 block mb-1">Artist Notes & Payment Terms</span>
-        <p class="whitespace-pre-line text-base-content/80">{{ invoice.notes }}</p>
-      </div>
-      {% endif %}
-
     </div>
-  </div>
 
   <!-- Payment Action Bar for Customers -->
   {% if invoice.balance_due > 0 %}
@@ -140,11 +86,181 @@
       <h3 class="font-bold text-lg">Ready to complete payment?</h3>
       <p class="text-sm text-base-content/60">Choose your payment method and submit a deposit or the remaining balance.</p>
     </div>
-    <a href="{% url 'billing:public_payment' token=token %}" class="btn btn-primary px-8">
-      Proceed to Payment &rarr;
-    </a>
-  </div>
-  {% endif %}
+    {% endif %}
 
+    <!-- Main Invoice Document -->
+    <div class="card bg-base-100 shadow-md border border-base-200">
+        <div class="card-body p-8 sm:p-12 space-y-8">
+            <!-- Header: From & To -->
+            <div
+                class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b border-base-200 pb-8"
+            >
+                <div>
+                    <span
+                        class="text-xs uppercase font-bold text-base-content/40 tracking-wider"
+                        >From</span
+                    >
+                    <h2 class="text-2xl font-bold mt-1">
+                        {{
+                        invoice.artist.artist_profile.business_name|default:invoice.artist.artist_profile.display_name|default:invoice.artist.email
+                        }}
+                    </h2>
+                    <p class="text-sm text-base-content/60 mt-0.5">
+                        {{ invoice.artist.email }}
+                    </p>
+                </div>
+
+                <div class="sm:text-right">
+                    <span
+                        class="text-xs uppercase font-bold text-base-content/40 tracking-wider"
+                        >Billed To</span
+                    >
+                    <h3 class="text-xl font-bold mt-1">
+                        {{ invoice.customer.name }}
+                    </h3>
+                    {% if invoice.customer.email %}
+                    <p class="text-sm text-base-content/60">
+                        {{ invoice.customer.email }}
+                    </p>
+                    {% endif %} {% if invoice.customer.country %}
+                    <p class="text-sm text-base-content/60">
+                        {{ invoice.customer.country }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Linked Project Brief summary if present -->
+            {% if invoice.project %}
+            <div class="bg-base-200/50 p-4 rounded-lg text-sm">
+                <span
+                    class="text-xs uppercase font-bold text-base-content/50 block"
+                    >Project / Commission</span
+                >
+                <span class="font-bold text-base"
+                    >{{ invoice.project.title }}</span
+                >
+                {% if invoice.project.description %}
+                <p
+                    class="text-xs text-base-content/70 mt-1 whitespace-pre-line"
+                >
+                    {{ invoice.project.description }}
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Itemized Table -->
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr class="border-b-2 border-base-300 text-sm">
+                            <th>Description</th>
+                            <th class="text-center w-24">Qty</th>
+                            <th class="text-right w-36">Unit Price</th>
+                            <th class="text-right w-36">Line Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in lines %}
+                        <tr class="border-b border-base-200">
+                            <td class="font-medium">{{ line.description }}</td>
+                            <td class="text-center">{{ line.quantity }}</td>
+                            <td class="text-right">
+                                {{ line.unit_price }} {{ invoice.currency }}
+                            </td>
+                            <td class="text-right font-semibold">
+                                {{ line.line_total }} {{ invoice.currency }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Financial Summary -->
+            <div class="flex justify-end pt-4">
+                <div class="w-full sm:w-80 space-y-3 text-sm">
+                    <div class="flex justify-between text-base-content/70">
+                        <span>Subtotal</span>
+                        <span
+                            >{{ invoice.subtotal }} {{ invoice.currency }}</span
+                        >
+                    </div>
+                    {% if invoice.discount_amount > 0 %}
+                    <div class="flex justify-between text-error font-medium">
+                        <span>Discount Applied</span>
+                        <span
+                            >-{{ invoice.discount_amount }} {{ invoice.currency
+                            }}</span
+                        >
+                    </div>
+                    {% endif %}
+                    <div class="divider my-1"></div>
+                    <div class="flex justify-between text-lg font-bold">
+                        <span>Total</span>
+                        <span
+                            >{{ invoice.total_amount }} {{ invoice.currency
+                            }}</span
+                        >
+                    </div>
+                    <div
+                        class="flex justify-between text-success font-semibold"
+                    >
+                        <span>Amount Paid</span>
+                        <span
+                            >{{ invoice.amount_paid }} {{ invoice.currency
+                            }}</span
+                        >
+                    </div>
+                    <div
+                        class="flex justify-between text-xl font-extrabold {% if invoice.balance_due > 0 %}text-primary{% else %}text-success{% endif %} border-t-2 border-base-300 pt-3"
+                    >
+                        <span>Balance Due</span>
+                        <span
+                            >{{ invoice.balance_due }} {{ invoice.currency
+                            }}</span
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes / Terms -->
+            {% if invoice.notes %}
+            <div
+                class="mt-8 p-4 bg-base-200/40 rounded-lg text-sm border-l-4 border-primary"
+            >
+                <span
+                    class="text-xs uppercase font-bold text-base-content/50 block mb-1"
+                    >Artist Notes & Payment Terms</span
+                >
+                <p class="whitespace-pre-line text-base-content/80">
+                    {{ invoice.notes }}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Payment Action Bar for Customers -->
+    {% if invoice.balance_due > 0 %}
+    <div
+        class="card bg-base-100 shadow-sm border border-base-200 p-6 text-center sm:text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+    >
+        <div>
+            <h3 class="font-bold text-lg">Ready to complete payment?</h3>
+            <p class="text-sm text-base-content/60">
+                Use the demo simulator to preview a payment record. No real
+                payment can be made here.
+            </p>
+        </div>
+        <a
+            href="{% url 'billing:public_payment' token=token %}"
+            class="btn btn-primary px-8"
+        >
+            Proceed to Payment &rarr;
+        </a>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

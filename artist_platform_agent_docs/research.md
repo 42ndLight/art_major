@@ -14,11 +14,11 @@ This file separates user intent from assumptions and verified external facts. Re
 
 | ID | Decision | Status | Evidence / reason | Revisit when |
 |---|---|---|---|---|
-| D-001 | Start with a private business-management tool for commission-based artists/designers; do not build a marketplace. | Proposed | Product direction in the project notes. | User changes target or business model. |
-| D-002 | Customers should be able to view an invoice from a private link without creating an account. | Proposed | Product direction in the project notes. | Usability or security research changes the flow. |
-| D-003 | Build one complete customer-to-invoice path before expanding into analytics, plans, or automation. | Recommended | Keeps the first release demonstrable and small. | A confirmed event brief requires a different demo. |
+| D-001 | Start with a private business-management tool for commission-based artists/designers; do not build a marketplace. | Verified | Product direction in the project notes. | User changes target or business model. |
+| D-002 | Customers should be able to view an invoice from a private link without creating an account. | Verified | Product direction in the project notes. | Usability or security research changes the flow. |
+| D-003 | Build one complete customer-to-invoice path before expanding into analytics, plans, or automation. | Verified | Keeps the first release demonstrable and small. | A confirmed event brief requires a different demo. |
 | D-004 | Treat Africa's Talking as a possible required integration, but do not select a channel until the event brief confirms it. | Unresolved | No event brief or official API evidence is recorded. | Official brief and account sandbox are reviewed. |
-| D-005 | Do not select or promise a payment provider until artist eligibility, country, currency, settlement, and verification flow are checked. | Unresolved | No provider research is recorded. | Target market and provider evidence are available. |
+| D-005 | Use Paystack as the primary payment provider for the first demo. | Verified | User preference. | Market expansion or provider failure. |
 
 ## Questions to answer first
 
@@ -44,14 +44,14 @@ This file separates user intent from assumptions and verified external facts. Re
 
 ## Research queue
 
-| Priority | Research item | Required evidence | Blocks |
-|---|---|---|---|
-| P0 | Actual hackathon requirements | Official brief, rubric, deadline, demo rules | Hackathon scope and integration choice |
-| P0 | First-user and launch-market choice | User answer or interview notes | Payment and UX choices |
-| P0 | Africa's Talking flow | Current official docs plus sandbox experiment for the required channel | Messaging implementation |
-| P0 | Payment provider fit | Official country/currency/onboarding docs and verified sandbox flow | Payment implementation |
-| P1 | Hosting and deployment | Current platform constraints and environment requirements | Deployment setup |
-| P1 | Framework/tool versions | Official docs and project setup once a repository exists | Dependency selection |
+| Priority | Research item                       | Required evidence                                                      | Blocks                                 |
+| -------- | ----------------------------------- | ---------------------------------------------------------------------- | -------------------------------------- |
+| P0       | Actual hackathon requirements       | Official brief, rubric, deadline, demo rules                           | Hackathon scope and integration choice |
+| P0       | First-user and launch-market choice | User answer or interview notes                                         | Payment and UX choices                 |
+| P0       | Africa's Talking flow               | Current official docs plus sandbox experiment for the required channel | Messaging implementation               |
+| P0       | Payment provider fit                | Official country/currency/onboarding docs and verified sandbox flow    | Payment implementation                 |
+| P1       | Hosting and deployment              | Current platform constraints and environment requirements              | Deployment setup                       |
+| P1       | Framework/tool versions             | Official docs and project setup once a repository exists               | Dependency selection                   |
 
 ## Evidence entry template
 

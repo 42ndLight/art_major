@@ -1,7 +1,9 @@
 """
 Tests for Public Customer Invoice view, Demo Payment flow, and Receipts.
 """
+
 from decimal import Decimal
+
 import pytest
 from django.urls import reverse
 
@@ -36,7 +38,9 @@ def issued_invoice(db, artist_user):
 
 @pytest.mark.django_db
 def test_public_customer_can_view_invoice_without_login(client, issued_invoice):
-    url = reverse("billing:public_invoice", kwargs={"token": issued_invoice.public_token})
+    url = reverse(
+        "billing:public_invoice", kwargs={"token": issued_invoice.public_token}
+    )
     response = client.get(url)
     assert response.status_code == 200
 
@@ -50,7 +54,7 @@ def test_public_customer_can_view_invoice_without_login(client, issued_invoice):
     assert "Sign out" not in content
     assert "Edit Draft" not in content
     assert "Record Payment" not in content
-    assert "dashboard" not in content.lower() or "href=\"/dashboard/\"" not in content
+    assert "dashboard" not in content.lower() or 'href="/dashboard/"' not in content
 
 
 @pytest.mark.django_db
@@ -58,7 +62,9 @@ def test_draft_and_void_invoices_are_not_accessible_publicly(client, issued_invo
     # Void the invoice
     issued_invoice.void()
 
-    url = reverse("billing:public_invoice", kwargs={"token": issued_invoice.public_token})
+    url = reverse(
+        "billing:public_invoice", kwargs={"token": issued_invoice.public_token}
+    )
     response = client.get(url)
     assert response.status_code == 404
     assert "Invoice Unavailable" in response.content.decode()
@@ -96,7 +102,9 @@ def test_public_demo_payment_flow_and_receipt(client, issued_invoice):
     assert "150.00 USD" in receipt_resp.content.decode()
 
     # 4. Pay the remaining $250
-    client.post(pay_url, {"amount": "250.00", "payment_method": "M-Pesa (Demo Simulator)"})
+    client.post(
+        pay_url, {"amount": "250.00", "payment_method": "M-Pesa (Demo Simulator)"}
+    )
     issued_invoice.refresh_from_db()
     assert issued_invoice.status == InvoiceStatus.PAID
     assert issued_invoice.amount_paid == Decimal("400.00")

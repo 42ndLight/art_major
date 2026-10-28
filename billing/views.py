@@ -1,8 +1,15 @@
 """
 Views for Invoices, Payments, and Public Customer Payment/Receipt flows.
 """
-from decimal import Decimal
-import uuid
+
+import hmac
+import hashlib
+import json
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+
+# ... (other imports)
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -15,13 +22,15 @@ from django.views.generic import DetailView, ListView, View
 
 from customers.models import Customer
 from projects.models import Project
-from .forms import InvoiceForm, InvoiceLineFormSet, ManualPaymentForm
-from .models import Invoice, InvoiceLine, InvoiceStatus, Payment, PaymentStatus
+from .models import Invoice, Payment, InvoiceStatus
 
+from .forms import InvoiceForm, InvoiceLineFormSet, ManualPaymentForm
+from .services import PaystackService
 
 # ---------------------------------------------------------------------------
 # Artist-Authenticated Invoice Views
 # ---------------------------------------------------------------------------
+
 
 class InvoiceListView(LoginRequiredMixin, ListView):
     model = Invoice
@@ -30,7 +39,9 @@ class InvoiceListView(LoginRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        qs = Invoice.objects.filter(artist=self.request.user).select_related("customer", "project")
+        qs = Invoice.objects.filter(artist=self.request.user).select_related(
+            "customer", "project"
+        )
         status_filter = self.request.GET.get("status")
         if status_filter in dict(InvoiceStatus.choices):
             qs = qs.filter(status=status_filter)
@@ -60,7 +71,9 @@ class InvoiceCreateView(LoginRequiredMixin, View):
         initial = {}
         customer_id = request.GET.get("customer")
         if customer_id:
-            customer = Customer.objects.filter(pk=customer_id, artist=request.user).first()
+            customer = Customer.objects.filter(
+                pk=customer_id, artist=request.user
+            ).first()
             if customer:
                 initial["customer"] = customer
 
@@ -74,11 +87,15 @@ class InvoiceCreateView(LoginRequiredMixin, View):
 
         form = InvoiceForm(artist=request.user, initial=initial)
         formset = InvoiceLineFormSet(prefix="lines")
-        return render(request, self.template_name, {
-            "form": form,
-            "formset": formset,
-            "is_create": True,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "formset": formset,
+                "is_create": True,
+            },
+        )
 
     def post(self, request):
         form = InvoiceForm(request.POST, artist=request.user)
@@ -97,14 +114,22 @@ class InvoiceCreateView(LoginRequiredMixin, View):
                 # Calculate line totals and invoice totals
                 invoice.calculate_totals(save=True)
 
-            messages.success(request, f"Invoice draft '{invoice.invoice_number}' created.")
-            return redirect(reverse("billing:invoice_detail", kwargs={"pk": invoice.pk}))
+            messages.success(
+                request, f"Invoice draft '{invoice.invoice_number}' created."
+            )
+            return redirect(
+                reverse("billing:invoice_detail", kwargs={"pk": invoice.pk})
+            )
 
-        return render(request, self.template_name, {
-            "form": form,
-            "formset": formset,
-            "is_create": True,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "formset": formset,
+                "is_create": True,
+            },
+        )
 
 
 class InvoiceUpdateView(LoginRequiredMixin, View):
@@ -119,21 +144,29 @@ class InvoiceUpdateView(LoginRequiredMixin, View):
     def get(self, request, pk):
         invoice = self.get_object(request, pk)
         if invoice.status != InvoiceStatus.DRAFT:
-            return redirect(reverse("billing:invoice_detail", kwargs={"pk": invoice.pk}))
+            return redirect(
+                reverse("billing:invoice_detail", kwargs={"pk": invoice.pk})
+            )
 
         form = InvoiceForm(instance=invoice, artist=request.user)
         formset = InvoiceLineFormSet(instance=invoice, prefix="lines")
-        return render(request, self.template_name, {
-            "form": form,
-            "formset": formset,
-            "invoice": invoice,
-            "is_create": False,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "formset": formset,
+                "invoice": invoice,
+                "is_create": False,
+            },
+        )
 
     def post(self, request, pk):
         invoice = self.get_object(request, pk)
         if invoice.status != InvoiceStatus.DRAFT:
-            return redirect(reverse("billing:invoice_detail", kwargs={"pk": invoice.pk}))
+            return redirect(
+                reverse("billing:invoice_detail", kwargs={"pk": invoice.pk})
+            )
 
         form = InvoiceForm(request.POST, instance=invoice, artist=request.user)
         formset = InvoiceLineFormSet(request.POST, instance=invoice, prefix="lines")
@@ -145,14 +178,20 @@ class InvoiceUpdateView(LoginRequiredMixin, View):
                 invoice.calculate_totals(save=True)
 
             messages.success(request, f"Invoice '{invoice.invoice_number}' updated.")
-            return redirect(reverse("billing:invoice_detail", kwargs={"pk": invoice.pk}))
+            return redirect(
+                reverse("billing:invoice_detail", kwargs={"pk": invoice.pk})
+            )
 
-        return render(request, self.template_name, {
-            "form": form,
-            "formset": formset,
-            "invoice": invoice,
-            "is_create": False,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "formset": formset,
+                "invoice": invoice,
+                "is_create": False,
+            },
+        )
 
 
 class InvoiceDetailView(LoginRequiredMixin, DetailView):
@@ -161,7 +200,9 @@ class InvoiceDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "invoice"
 
     def get_queryset(self):
-        return Invoice.objects.filter(artist=self.request.user).select_related("customer", "project")
+        return Invoice.objects.filter(artist=self.request.user).select_related(
+            "customer", "project"
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -171,7 +212,9 @@ class InvoiceDetailView(LoginRequiredMixin, DetailView):
         context["payment_form"] = ManualPaymentForm(initial={"amount": invoice.balance_due})
         if invoice.public_token:
             context["public_url"] = self.request.build_absolute_uri(
-                reverse("billing:public_invoice", kwargs={"token": invoice.public_token})
+                reverse(
+                    "billing:public_invoice", kwargs={"token": invoice.public_token}
+                )
             )
         return context
 
@@ -180,15 +223,34 @@ class InvoiceIssueView(LoginRequiredMixin, View):
     def post(self, request, pk):
         invoice = get_object_or_404(Invoice, pk=pk, artist=request.user)
         if invoice.status != InvoiceStatus.DRAFT:
-            messages.warning(request, "This invoice is already issued or cannot be issued.")
-            return redirect(reverse("billing:invoice_detail", kwargs={"pk": invoice.pk}))
+            messages.warning(
+                request, "This invoice is already issued or cannot be issued."
+            )
+            return redirect(
+                reverse("billing:invoice_detail", kwargs={"pk": invoice.pk})
+            )
 
         if not invoice.lines.exists():
             messages.error(request, "Cannot issue an invoice with no line items.")
-            return redirect(reverse("billing:invoice_detail", kwargs={"pk": invoice.pk}))
+            return redirect(
+                reverse("billing:invoice_detail", kwargs={"pk": invoice.pk})
+            )
 
         invoice.issue()
-        messages.success(request, f"Invoice '{invoice.invoice_number}' has been issued! A private customer link is ready.")
+        
+        # Trigger SMS notification
+        from .services import AfricaTalkingService
+        if invoice.customer.phone_number:
+            public_url = request.build_absolute_uri(
+                reverse("billing:public_invoice", kwargs={"token": invoice.public_token})
+            )
+            message = f"Hello {invoice.customer.name}, you have a new invoice from {invoice.artist.get_full_name()}. View here: {public_url}"
+            AfricaTalkingService.send_sms(invoice.customer.phone_number, message)
+
+        messages.success(
+            request,
+            f"Invoice '{invoice.invoice_number}' has been issued! A private customer link is ready.",
+        )
         return redirect(reverse("billing:invoice_detail", kwargs={"pk": invoice.pk}))
 
 
@@ -197,10 +259,15 @@ class InvoiceVoidView(LoginRequiredMixin, View):
         invoice = get_object_or_404(Invoice, pk=pk, artist=request.user)
         if invoice.status == InvoiceStatus.PAID:
             messages.error(request, "Cannot void an already paid invoice.")
-            return redirect(reverse("billing:invoice_detail", kwargs={"pk": invoice.pk}))
+            return redirect(
+                reverse("billing:invoice_detail", kwargs={"pk": invoice.pk})
+            )
 
         invoice.void()
-        messages.success(request, f"Invoice '{invoice.invoice_number}' has been marked as VOID. Public link is now revoked.")
+        messages.success(
+            request,
+            f"Invoice '{invoice.invoice_number}' has been marked as VOID. Public link is now revoked.",
+        )
         return redirect(reverse("billing:invoice_detail", kwargs={"pk": invoice.pk}))
 
 
@@ -209,7 +276,9 @@ class InvoiceRecordPaymentView(LoginRequiredMixin, View):
         invoice = get_object_or_404(Invoice, pk=pk, artist=request.user)
         if invoice.status == InvoiceStatus.VOID:
             messages.error(request, "Cannot record payment on a voided invoice.")
-            return redirect(reverse("billing:invoice_detail", kwargs={"pk": invoice.pk}))
+            return redirect(
+                reverse("billing:invoice_detail", kwargs={"pk": invoice.pk})
+            )
 
         form = ManualPaymentForm(request.POST)
         if form.is_valid():
@@ -236,25 +305,35 @@ class PaymentListView(LoginRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        return Payment.objects.filter(artist=self.request.user).select_related("invoice", "invoice__customer")
+        return Payment.objects.filter(artist=self.request.user).select_related(
+            "invoice", "invoice__customer"
+        )
 
 
 # ---------------------------------------------------------------------------
 # Public Customer Invoice, Payment & Receipt Views (No Auth Required)
 # ---------------------------------------------------------------------------
 
+
 class PublicInvoiceView(View):
     template_name = "billing/public_invoice.html"
 
     def get(self, request, token):
-        invoice = Invoice.objects.filter(public_token=token).select_related(
-            "artist", "artist__artist_profile", "customer", "project"
-        ).first()
+        invoice = (
+            Invoice.objects.filter(public_token=token)
+            .select_related("artist", "artist__artist_profile", "customer", "project")
+            .first()
+        )
 
         if not invoice or invoice.status in [InvoiceStatus.DRAFT, InvoiceStatus.VOID]:
-            return render(request, "billing/public_revoked.html", {
-                "is_void": invoice and invoice.status == InvoiceStatus.VOID,
-            }, status=404)
+            return render(
+                request,
+                "billing/public_revoked.html",
+                {
+                    "is_void": invoice and invoice.status == InvoiceStatus.VOID,
+                },
+                status=404,
+            )
 
         return render(request, self.template_name, {
             "invoice": invoice,
@@ -268,9 +347,11 @@ class PublicPaymentView(View):
     template_name = "billing/public_payment.html"
 
     def get_invoice(self, token):
-        invoice = Invoice.objects.filter(public_token=token).select_related(
-            "artist", "artist__artist_profile", "customer"
-        ).first()
+        invoice = (
+            Invoice.objects.filter(public_token=token)
+            .select_related("artist", "artist__artist_profile", "customer")
+            .first()
+        )
         if not invoice or invoice.status in [InvoiceStatus.DRAFT, InvoiceStatus.VOID]:
             raise Http404("Invoice not found or expired.")
         return invoice
@@ -304,45 +385,138 @@ class PublicPaymentView(View):
                 "suggested_amount": invoice.balance_due,
             })
 
-        payment_method = request.POST.get("payment_method", "Credit Card (Sandbox Demo)")
-
+        payment_method = request.POST.get("payment_method", "Paystack")
+        
+        # Create a pending payment record
         with transaction.atomic():
             payment = Payment.objects.create(
                 artist=invoice.artist,
                 invoice=invoice,
-                provider="demo_stub",
-                provider_reference=f"DEMO-{uuid.uuid4().hex[:10].upper()}",
+                provider="paystack",
+                provider_reference=f"PYST-{uuid.uuid4().hex[:10].upper()}",
                 amount=amount,
                 currency=invoice.currency,
-                status=PaymentStatus.SUCCEEDED,
+                status=PaymentStatus.PENDING,
                 payment_method=payment_method,
-                notes="Payment completed via Stage 2 customer sandbox stub.",
+                notes="Payment initiated via Paystack.",
             )
 
-        messages.success(request, f"Demo payment of {payment.amount} {payment.currency} succeeded!")
-        return redirect(reverse("billing:public_receipt", kwargs={"token": token}))
+        # Paystack expects amount in the smallest currency unit (e.g., cents/kobo)
+        paystack_amount = int(amount * 100)
+        
+        customer_email = invoice.customer.email or "customer@example.com"
+        callback_url = request.build_absolute_uri(
+            reverse("billing:public_receipt", kwargs={"token": token})
+        )
+        
+        auth_url = PaystackService.initialize_transaction(
+            email=customer_email,
+            amount=paystack_amount,
+            callback_url=callback_url,
+            metadata={"payment_id": str(payment.id), "invoice_id": str(invoice.id)}
+        )
+
+        if auth_url:
+            return redirect(auth_url)
+        else:
+            messages.error(request, "Could not initialize payment with Paystack. Please try again later.")
+            return render(request, self.template_name, {
+                "invoice": invoice,
+                "token": token,
+                "suggested_amount": invoice.balance_due,
+            })
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PaystackWebhookView(View):
+    """
+    Webhook handler for Paystack events.
+    """
+    def post(self, request):
+        signature = request.headers.get("X-Paystack-Signature")
+        if not signature:
+            return HttpResponse("Missing signature", status=400)
+
+        # Verify signature
+        secret = config("PAYSTACK_SECRET_KEY", default="")
+        payload = request.body
+        expected_signature = hmac.new(
+            secret.encode("utf-8"), 
+            payload, 
+            hashlib.sha512
+        ).hexdigest()
+
+        if not hmac.compare_digest(expected_signature, signature):
+            return HttpResponse("Invalid signature", status=400)
+
+        try:
+            data = json.loads(payload)
+            event = data.get("event")
+            
+            if event == "charge.success":
+                payment_data = data.get("data")
+                reference = payment_data.get("reference")
+                
+                payment_id = payment_data.get("metadata", {}).get("payment_id")
+                
+                if payment_id:
+                    with transaction.atomic():
+                        payment = Payment.objects.select_for_update().get(id=payment_id)
+                        if payment.status == PaymentStatus.PENDING:
+                            payment.status = PaymentStatus.SUCCEEDED
+                            payment.provider_reference = reference
+                            payment.confirmed_at = timezone.now()
+                            payment.save()
+                            
+                            # Update the invoice
+                            payment.invoice.update_payment_status()
+                            
+                            # Trigger SMS notification
+                            from .services import AfricaTalkingService
+                            customer = payment.invoice.customer
+                            if customer.phone_number:
+                                receipt_url = f"https://example.com/receipt/{payment.invoice.public_token}" # In reality, use a real URL
+                                message = f"Thank you {customer.name}! Your payment of {payment.amount} {payment.currency} has been confirmed."
+                                AfricaTalkingService.send_sms(customer.phone_number, message)
+                            
+                return HttpResponse("OK", status=200)
+
+            return HttpResponse("Event ignored", status=200)
+
+        except Exception as e:
+            logger.error(f"Paystack webhook error: {e}")
+            return HttpResponse("Internal error", status=500)
 
 
 class PublicReceiptView(View):
+
     template_name = "billing/public_receipt.html"
 
     def get(self, request, token):
-        invoice = Invoice.objects.filter(public_token=token).select_related(
-            "artist", "artist__artist_profile", "customer"
-        ).first()
+        invoice = (
+            Invoice.objects.filter(public_token=token)
+            .select_related("artist", "artist__artist_profile", "customer")
+            .first()
+        )
 
         if not invoice:
             raise Http404("Receipt not found.")
 
-        payments = invoice.payments.filter(status=PaymentStatus.SUCCEEDED).order_by("-confirmed_at")
+        payments = invoice.payments.filter(status=PaymentStatus.SUCCEEDED).order_by(
+            "-confirmed_at"
+        )
         if not payments.exists():
             return redirect(reverse("billing:public_invoice", kwargs={"token": token}))
 
         latest_payment = payments.first()
 
-        return render(request, self.template_name, {
-            "invoice": invoice,
-            "payments": payments,
-            "latest_payment": latest_payment,
-            "token": token,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "invoice": invoice,
+                "payments": payments,
+                "latest_payment": latest_payment,
+                "token": token,
+            },
+        )
