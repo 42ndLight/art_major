@@ -176,6 +176,126 @@ def test_inbound_sms_idempotency(client, verified_artist, monkeypatch):
     assert Customer.objects.filter(artist=verified_artist, name="Duplicate Test").count() == 1
 
 
+@pytest.mark.django_db
+def test_inbound_sms_updates_existing_customer_phone_and_details(client, verified_artist, monkeypatch):
+    """Sending CUSTOMER command for an existing customer updates phone and email."""
+    customer = Customer.objects.create(
+        artist=verified_artist,
+        name="Existing Client",
+        phone_number="+254700000000",
+    )
+
+    sent_replies = []
+    monkeypatch.setattr("communications.views.send_sms", lambda r, m: sent_replies.append({"recipient": r, "message": m}))
+
+    # Update with new phone and email
+    payload = {
+        "from": "+254712345678",
+        "text": "CUSTOMER|Existing Client|+254799887766|client@example.com",
+        "id": "AT_MSG_UPDATE_001",
+    }
+    resp = client.post(reverse("africastalking-inbound"), payload)
+    assert resp.status_code == 200
+
+    customer.refresh_from_db()
+    assert customer.phone_number == "+254799887766"
+    assert customer.email == "client@example.com"
+
+    sms_record = InboundSMS.objects.get(provider_message_id="AT_MSG_UPDATE_001")
+    assert sms_record.outcome == "customer_updated"
+    assert "updated" in sent_replies[0]["message"]
+
+
+@pytest.mark.django_db
+def test_inbound_sms_creates_and_updates_invoice_draft(client, verified_artist, monkeypatch):
+    """
+    INVOICE command creates a new draft for a customer, and INVOICE with the draft number
+    updates the amount, currency, and line description.
+    """
+    customer = Customer.objects.create(
+        artist=verified_artist,
+        name="Bob Builder",
+        phone_number="+254711223344",
+    )
+
+    sent_replies = []
+    monkeypatch.setattr("communications.views.send_sms", lambda r, m: sent_replies.append({"recipient": r, "message": m}))
+
+    # 1. Create new draft invoice with formatted amount (5,000)
+    payload_create = {
+        "from": "+254712345678",
+        "text": "INVOICE|Bob Builder|5,000|KES|Site Blueprint Design",
+        "id": "AT_MSG_INV_001",
+    }
+    resp1 = client.post(reverse("africastalking-inbound"), payload_create)
+    assert resp1.status_code == 200
+
+    from billing.models import Invoice, InvoiceStatus
+    from decimal import Decimal
+
+    invoice = Invoice.objects.filter(artist=verified_artist, customer=customer).first()
+    assert invoice is not None
+    assert invoice.status == InvoiceStatus.DRAFT
+    assert invoice.total_amount == Decimal("5000.00")
+    assert invoice.currency == "KES"
+    assert invoice.lines.first().description == "Site Blueprint Design"
+
+    # 2. Update existing draft invoice by its invoice number
+    payload_update = {
+        "from": "+254712345678",
+        "text": f"INVOICE|{invoice.invoice_number}|6500|USD|Revised 3D Blueprint",
+        "id": "AT_MSG_INV_002",
+    }
+    resp2 = client.post(reverse("africastalking-inbound"), payload_update)
+    assert resp2.status_code == 200
+
+    invoice.refresh_from_db()
+    assert invoice.status == InvoiceStatus.DRAFT
+    assert invoice.total_amount == Decimal("6500.00")
+    assert invoice.currency == "USD"
+    assert invoice.lines.first().description == "Revised 3D Blueprint"
+
+    sms_record = InboundSMS.objects.get(provider_message_id="AT_MSG_INV_002")
+    assert sms_record.outcome == "invoice_draft_updated"
+    assert "updated" in sent_replies[-1]["message"]
+
+
+@pytest.mark.django_db
+def test_inbound_sms_cannot_update_non_draft_invoice(client, verified_artist, monkeypatch):
+    """Attempting to update an issued invoice via SMS is rejected safely."""
+    customer = Customer.objects.create(artist=verified_artist, name="Acme Corp")
+    from billing.models import Invoice, InvoiceLine, InvoiceStatus
+    from decimal import Decimal
+
+    invoice = Invoice.objects.create(
+        artist=verified_artist,
+        customer=customer,
+        invoice_number="INV-ISSUED-01",
+        status=InvoiceStatus.ISSUED,
+    )
+    InvoiceLine.objects.create(invoice=invoice, description="Work", unit_price=Decimal("100.00"), quantity=Decimal("1.00"))
+    invoice.calculate_totals()
+
+    sent_replies = []
+    monkeypatch.setattr("communications.views.send_sms", lambda r, m: sent_replies.append({"recipient": r, "message": m}))
+
+    payload = {
+        "from": "+254712345678",
+        "text": "INVOICE|INV-ISSUED-01|200|USD|Tampered Work",
+        "id": "AT_MSG_INV_003",
+    }
+    resp = client.post(reverse("africastalking-inbound"), payload)
+    assert resp.status_code == 200
+
+    invoice.refresh_from_db()
+    assert invoice.total_amount == Decimal("100.00")  # Untouched
+
+    sms_record = InboundSMS.objects.get(provider_message_id="AT_MSG_INV_003")
+    assert sms_record.outcome == "invoice_immutable"
+    assert "cannot be modified via SMS" in sent_replies[0]["message"]
+
+
+
 def test_send_sms_accepts_standard_status_codes(monkeypatch, settings):
     """Africa's Talking status codes 100 (Processed), 101 (Sent), and 102 (Queued) must be treated as success."""
     import json
