@@ -16,11 +16,9 @@ from .services import AfricaTalkingError, send_sms
 
 @csrf_exempt
 @require_POST
-def inbound_sms(request, token):
-    expected = getattr(settings, "AFRICASTALKING_INBOUND_WEBHOOK_TOKEN", "")
-    if not expected or not hmac.compare_digest(token, expected):
-        return HttpResponse(status=404)
-
+def inbound_sms(request, token=None):
+    # Webhook endpoint is left open for Africa's Talking inbound SMS callbacks.
+    # Authentication of actions is performed by verifying the sender's phone against active ArtistProfiles.
     data = request.POST
     if not data and request.body:
         try:

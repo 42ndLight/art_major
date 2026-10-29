@@ -15,7 +15,7 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 AFRICASTALKING_API_KEY = config("AFRICASTALKING_API_KEY", default="")
 AFRICASTALKING_USERNAME = config("AFRICASTALKING_USERNAME", default="sandbox")
-AFRICASTALKING_ENVIRONMENT = config("AFRICASTALKING_ENVIRONMENT", default="sandbox", choices=["sandbox", "production"])
+AFRICASTALKING_ENVIRONMENT = config("AFRICASTALKING_ENVIRONMENT", default="sandbox")
 AFRICASTALKING_SENDER_ID = config("AFRICASTALKING_SENDER_ID", default="")
 AFRICASTALKING_INBOUND_WEBHOOK_TOKEN = config("AFRICASTALKING_INBOUND_WEBHOOK_TOKEN", default="")
 

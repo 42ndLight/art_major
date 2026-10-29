@@ -15,6 +15,7 @@ from django.views import View
 
 from communications.services import AfricaTalkingError, send_sms
 from .forms import LoginForm, ProfileForm, SignUpForm
+from .models import ArtistProfile
 
 
 class SignUpView(View):

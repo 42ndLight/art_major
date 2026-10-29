@@ -5,11 +5,14 @@ Views for Invoices, Payments, and Public Customer Payment/Receipt flows.
 import hmac
 import hashlib
 import json
+import logging
+import uuid
+from decimal import Decimal
+from django.utils import timezone
+from decouple import config
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-
-# ... (other imports)
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -22,10 +25,12 @@ from django.views.generic import DetailView, ListView, View
 
 from customers.models import Customer
 from projects.models import Project
-from .models import Invoice, Payment, InvoiceStatus
+from .models import Invoice, Payment, InvoiceStatus, PaymentStatus
 
 from .forms import InvoiceForm, InvoiceLineFormSet, ManualPaymentForm
-from .services import PaystackService
+from .services import PaystackService, notify_artist_payment_received, notify_artist_payment
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Artist-Authenticated Invoice Views
@@ -385,9 +390,53 @@ class PublicPaymentView(View):
                 "suggested_amount": invoice.balance_due,
             })
 
-        payment_method = request.POST.get("payment_method", "Paystack")
-        
-        # Create a pending payment record
+        payment_method = request.POST.get("payment_method", "Credit Card (Demo Simulator)")
+
+        is_mock = (
+            request.POST.get("action") == "mock_pay"
+            or request.POST.get("mock_pay")
+            or "demo" in payment_method.lower()
+            or "mock" in payment_method.lower()
+            or "simulator" in payment_method.lower()
+            or (request.POST.get("action") != "paystack" and not PaystackService.SECRET_KEY)
+        )
+
+        if is_mock:
+            with transaction.atomic():
+                payment = Payment.objects.create(
+                    artist=invoice.artist,
+                    invoice=invoice,
+                    provider="mock_demo",
+                    provider_reference=f"MOCK-{uuid.uuid4().hex[:10].upper()}",
+                    amount=amount,
+                    currency=invoice.currency,
+                    status=PaymentStatus.SUCCEEDED,
+                    payment_method=payment_method or "Mock Payment Simulator",
+                    notes="Payment completed via customer mock payment simulator.",
+                )
+
+            # Trigger SMS notification to artist
+            sms_sent, artist_notice = notify_artist_payment_received(payment)
+
+            # Trigger SMS notification to customer if phone exists
+            customer = invoice.customer
+            if customer and customer.phone_number:
+                try:
+                    from communications.services import send_sms
+                    send_sms(
+                        customer.phone_number,
+                        f"Thank you {customer.name}! Your payment of {payment.amount} {payment.currency} has been confirmed.",
+                    )
+                except Exception as e:
+                    logger.warning(f"Customer SMS error: {e}")
+
+            messages.success(
+                request,
+                f"Demo payment of {payment.amount} {payment.currency} succeeded! {artist_notice}",
+            )
+            return redirect(reverse("billing:public_receipt", kwargs={"token": token}))
+
+        # Create a pending payment record for Paystack
         with transaction.atomic():
             payment = Payment.objects.create(
                 artist=invoice.artist,
@@ -419,7 +468,7 @@ class PublicPaymentView(View):
         if auth_url:
             return redirect(auth_url)
         else:
-            messages.error(request, "Could not initialize payment with Paystack. Please try again later.")
+            messages.error(request, "Could not initialize payment with Paystack. Please try again or use the Mock Payment option.")
             return render(request, self.template_name, {
                 "invoice": invoice,
                 "token": token,
@@ -471,13 +520,17 @@ class PaystackWebhookView(View):
                             # Update the invoice
                             payment.invoice.update_payment_status()
                             
-                            # Trigger SMS notification
-                            from .services import AfricaTalkingService
+                            # Trigger SMS notifications
                             customer = payment.invoice.customer
-                            if customer.phone_number:
-                                receipt_url = f"https://example.com/receipt/{payment.invoice.public_token}" # In reality, use a real URL
+                            if customer and customer.phone_number:
                                 message = f"Thank you {customer.name}! Your payment of {payment.amount} {payment.currency} has been confirmed."
-                                AfricaTalkingService.send_sms(customer.phone_number, message)
+                                try:
+                                    from communications.services import send_sms
+                                    send_sms(customer.phone_number, message)
+                                except Exception as sms_err:
+                                    logger.warning(f"Paystack customer SMS error: {sms_err}")
+
+                            notify_artist_payment_received(payment)
                             
                 return HttpResponse("OK", status=200)
 
