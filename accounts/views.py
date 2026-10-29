@@ -1,6 +1,7 @@
 """
 Views for the accounts app.
 """
+import logging
 import secrets
 from datetime import timedelta
 
@@ -16,6 +17,8 @@ from django.views import View
 from communications.services import AfricaTalkingError, send_sms
 from .forms import LoginForm, ProfileForm, SignUpForm
 from .models import ArtistProfile
+
+logger = logging.getLogger(__name__)
 
 
 class SignUpView(View):
@@ -90,7 +93,11 @@ class ProfileView(LoginRequiredMixin, View):
             if not phone.startswith("+") or not phone[1:].isdigit() or not 8 <= len(phone[1:]) <= 15:
                 messages.error(request, "Enter a phone number in international format, for example +254712345678.")
                 return redirect("profile")
-            if profile.sms_verification_expires_at and profile.sms_verification_expires_at > timezone.now():
+            if (
+                profile.sms_verification_code_hash
+                and profile.sms_verification_expires_at
+                and profile.sms_verification_expires_at > timezone.now()
+            ):
                 messages.info(request, "A verification code was already sent. Use it or wait for it to expire before requesting another.")
                 return redirect("profile")
             if ArtistProfile.objects.filter(phone_number=phone).exclude(pk=profile.pk).exists():
@@ -105,11 +112,18 @@ class ProfileView(LoginRequiredMixin, View):
             profile.save(update_fields=["phone_number", "phone_verified_at", "sms_verification_code_hash", "sms_verification_expires_at", "sms_verification_attempts", "updated_at"])
             try:
                 send_sms(phone, f"Your ArtMajor verification code is {code}. It expires in 10 minutes.")
-            except AfricaTalkingError:
+            except AfricaTalkingError as err:
+                logger.warning(f"Failed to send verification SMS to {phone}: {err}")
                 profile.sms_verification_code_hash = ""
                 profile.sms_verification_expires_at = None
                 profile.save(update_fields=["sms_verification_code_hash", "sms_verification_expires_at", "updated_at"])
-                messages.error(request, "Could not send a verification SMS. Check Africa's Talking configuration and try again.")
+                messages.error(request, f"Could not send a verification SMS: {err}")
+            except Exception as exc:
+                logger.exception(f"Unexpected error sending verification SMS to {phone}: {exc}")
+                profile.sms_verification_code_hash = ""
+                profile.sms_verification_expires_at = None
+                profile.save(update_fields=["sms_verification_code_hash", "sms_verification_expires_at", "updated_at"])
+                messages.error(request, "Could not send verification SMS. Please check your configuration and try again.")
             else:
                 messages.success(request, "Verification code sent. Enter it below within 10 minutes.")
             return redirect("profile")

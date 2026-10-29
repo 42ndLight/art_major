@@ -243,14 +243,17 @@ class InvoiceIssueView(LoginRequiredMixin, View):
 
         invoice.issue()
         
-        # Trigger SMS notification
-        from .services import AfricaTalkingService
-        if invoice.customer.phone_number:
+        # Trigger SMS notification to customer if phone number is present
+        if invoice.customer and invoice.customer.phone_number:
             public_url = request.build_absolute_uri(
                 reverse("billing:public_invoice", kwargs={"token": invoice.public_token})
             )
             message = f"Hello {invoice.customer.name}, you have a new invoice from {invoice.artist.get_full_name()}. View here: {public_url}"
-            AfricaTalkingService.send_sms(invoice.customer.phone_number, message)
+            try:
+                from communications.services import send_sms
+                send_sms(invoice.customer.phone_number, message)
+            except Exception as e:
+                logger.warning(f"Customer invoice issue SMS could not be sent: {e}")
 
         messages.success(
             request,

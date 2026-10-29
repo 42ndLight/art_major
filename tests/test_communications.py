@@ -174,3 +174,84 @@ def test_inbound_sms_idempotency(client, verified_artist, monkeypatch):
     # Should not re-send reply SMS or fail
     assert counter["calls"] == 1
     assert Customer.objects.filter(artist=verified_artist, name="Duplicate Test").count() == 1
+
+
+def test_send_sms_accepts_standard_status_codes(monkeypatch, settings):
+    """Africa's Talking status codes 100 (Processed), 101 (Sent), and 102 (Queued) must be treated as success."""
+    import json
+    from io import BytesIO
+    from communications.services import send_sms
+
+    settings.AFRICASTALKING_API_KEY = "dummy-key"
+    settings.AFRICASTALKING_USERNAME = "sandbox"
+
+    # Test 101 Sent (most common in real-world AT responses)
+    class FakeResponse101:
+        def read(self):
+            return json.dumps({
+                "SMSMessageData": {
+                    "Message": "Sent to 1/1",
+                    "Recipients": [{"statusCode": 101, "status": "Success", "number": "+254712345678", "cost": "KES 0.8"}]
+                }
+            }).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr("communications.services.urlopen", lambda req, timeout=10: FakeResponse101())
+    recipient_info = send_sms("+254712345678", "Test message")
+    assert recipient_info["statusCode"] == 101
+    assert recipient_info["status"] == "Success"
+
+    # Test 100 Processed
+    class FakeResponse100:
+        def read(self):
+            return json.dumps({
+                "SMSMessageData": {
+                    "Message": "Sent to 1/1",
+                    "Recipients": [{"statusCode": 100, "status": "Processed", "number": "+254712345678"}]
+                }
+            }).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr("communications.services.urlopen", lambda req, timeout=10: FakeResponse100())
+    res100 = send_sms("+254712345678", "Test message")
+    assert res100["statusCode"] == 100
+
+
+def test_send_sms_raises_on_rejection(monkeypatch, settings):
+    """send_sms raises AfricaTalkingError with details when provider rejects."""
+    import json
+    from communications.services import send_sms, AfricaTalkingError
+
+    settings.AFRICASTALKING_API_KEY = "dummy-key"
+    settings.AFRICASTALKING_USERNAME = "sandbox"
+
+    class FakeResponse403:
+        def read(self):
+            return json.dumps({
+                "SMSMessageData": {
+                    "Message": "InvalidPhoneNumber",
+                    "Recipients": [{"statusCode": 403, "status": "InvalidPhoneNumber", "number": "invalid"}]
+                }
+            }).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr("communications.services.urlopen", lambda req, timeout=10: FakeResponse403())
+    with pytest.raises(AfricaTalkingError) as exc_info:
+        send_sms("invalid", "Test message")
+    assert "InvalidPhoneNumber" in str(exc_info.value)
+
