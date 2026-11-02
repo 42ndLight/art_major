@@ -185,5 +185,22 @@ art_major/
 | **1** | Scaffold, auth, dashboard, tests | ✅ Current |
 | 2 | Customers & Projects | 🔜 |
 | 3 | Invoices & Payments | 🔜 |
-| 4 | Notifications (Africa's Talking) | 🔜 |
+| 4 | Africa's Talking SMS commands and notifications | In progress |
 | 5 | Reporting & analytics | 🔜 |
+
+## Africa's Talking SMS (feature-AT)
+
+Configure `AFRICASTALKING_API_KEY`, `AFRICASTALKING_USERNAME`, and `AFRICASTALKING_ENVIRONMENT` (`sandbox` by default). Set a long random `AFRICASTALKING_INBOUND_WEBHOOK_TOKEN`, then configure the AT inbound SMS callback to:
+
+```text
+https://<your-host>/webhooks/africastalking/inbound/<AFRICASTALKING_INBOUND_WEBHOOK_TOKEN>/
+```
+
+Artists add their phone number in Settings → Profile and request a verification code. Only a verified artist number can issue commands. Supported messages:
+
+```text
+CUSTOMER|Jane Doe|+254712345678
+INVOICE|Jane Doe|5000|KES|Logo design
+```
+
+Invoices are created as drafts for review. The app records inbound provider IDs for idempotency, stores only a digest of SMS text, and replies to the artist. Test with Africa's Talking sandbox credentials and destinations before production. Verify the callback fields and delivery behavior against the configured AT account before live use.

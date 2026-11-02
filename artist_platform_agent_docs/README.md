@@ -17,7 +17,7 @@ This folder is the whole project so far: it contains specifications, not an appl
 
 Artist signs in → adds a customer → tracks a commission → creates an invoice → shares a private invoice page → records or verifies payment → provides confirmation.
 
-The customer should not need a platform account. Payments, Africa's Talking messaging, supported countries, and currencies are not confirmed yet. Do not imply that they work until provider and event research is recorded.
+The customer should not need a platform account. Payment and communications behavior must be checked against target market and sandbox before production. Africa's Talking SMS commands are implemented on `feature-AT`; see `API.md` and `research.md` for current limitations.
 
 ## Document map
 

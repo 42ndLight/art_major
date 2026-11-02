@@ -114,3 +114,44 @@ class AfricaTalkingService:
         except requests.RequestException as e:
             logger.error(f"Africa's Talking SMS error: {e}")
             return None
+
+
+def notify_artist_payment_received(payment):
+    """
+    Sends an SMS notification to the artist informing them that a payment has been received.
+    Uses communications.services.send_sms.
+    Returns (success: bool, detail: str).
+    """
+    artist = payment.artist
+    profile = getattr(artist, "artist_profile", None)
+    phone_number = getattr(profile, "phone_number", None) if profile else None
+
+    if not phone_number:
+        logger.info(f"Artist {artist.email} does not have a phone number configured. SMS skipped.")
+        return False, "Artist does not have a phone number configured on their profile."
+
+    customer_name = payment.invoice.customer.name if payment.invoice.customer else "Customer"
+    invoice_number = payment.invoice.invoice_number
+    amount = payment.amount
+    currency = payment.currency
+    balance = payment.invoice.balance_due
+
+    message = (
+        f"ArtMajor: Payment received! {amount} {currency} for invoice {invoice_number} "
+        f"from {customer_name}. Outstanding: {balance} {currency}."
+    )
+
+    try:
+        from communications.services import send_sms, AfricaTalkingError
+        send_sms(phone_number, message)
+        logger.info(f"Payment notification SMS sent to artist at {phone_number}.")
+        return True, f"Notification SMS sent to artist at {phone_number}."
+    except Exception as e:
+        logger.warning(f"Could not deliver payment notification SMS to artist {phone_number}: {e}")
+        return False, f"SMS notification to artist ({phone_number}) could not be delivered: {e}"
+
+
+# Alias for backward compatibility / API flexibility
+notify_artist_payment = notify_artist_payment_received
+
+

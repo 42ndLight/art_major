@@ -1,6 +1,6 @@
 # Application Routes and Integration Contracts
 
-**Proposed contract only:** the planning documents suggest Django server-rendered views, HTML forms, and HTMX partial responses. This repository does not yet contain an application, so these routes are not implemented. Confirm the stack and provider choices before building the contracts below.
+This document covers implemented application routes and proposed contracts. Africa's Talking callback behavior still requires sandbox verification against the configured AT account.
 
 ## 1. Conventions
 
@@ -88,18 +88,27 @@ For every payment event:
 
 Do not invent provider callback signatures, endpoints, or authentication rules. Research and cite the exact official documentation in `research.md`.
 
-## 5. Africa's Talking communications contract
+## 5. Africa's Talking SMS integration
 
-The hackathon requires a communications feature, but the exact event brief and channel must be verified. The provisional design is transactional SMS via Africa's Talking, if supported and appropriate.
+Inbound commands are implemented on `feature-AT`. Configure the callback as `POST /webhooks/africastalking/inbound/<token>/`; the endpoint expects form fields `from`, `text`, and stable provider message `id`. The high-entropy token must match `AFRICASTALKING_INBOUND_WEBHOOK_TOKEN`; invalid tokens receive 404. Duplicate provider IDs are ignored. SMS text is not retained; the app stores a digest and minimal processing metadata.
 
-Potential internal operation:
+Supported commands:
+
+```text
+CUSTOMER|Name|+254712345678
+INVOICE|Customer name|amount|KES|Description
+```
+
+The sender must match an active artist's verified profile phone. Lookups and writes are scoped to that artist. SMS invoice creation makes a one-line draft only; it does not issue an invoice or initiate payment. A reply is sent to the artist, and reply failure does not roll back a created record.
+
+Outbound operation:
 
 - `send_transactional_sms(recipient, template_key, context, idempotency_key)`
 
 Requirements:
 
 - API key, username, sender ID, and environment must come from environment configuration, following the official API's actual requirements.
-- Sandbox and production settings must be separate.
+- Sandbox is the default; sandbox and production use separate API hosts.
 - Allowlisted test recipients or mocked calls must be used in automated tests.
 - Record request purpose, provider response/message ID, status, and redacted error.
 - Do not include full invoice details, payment tokens, or sensitive customer data in SMS.
@@ -113,7 +122,7 @@ Potential MVP events:
 - Payment confirmed: “Your payment has been confirmed. Receipt: [secure receipt link]”
 - Project update: only when artist explicitly initiates the update.
 
-Do not send messages automatically to real recipients until the user explicitly authorises live messaging and production credentials are configured.
+The adapter uses the AT REST messaging endpoint and reports API acceptance, not handset delivery. Confirm callback fields, replay behavior, sender ID setup, and delivery with the configured sandbox before production.
 
 ## 6. Form validation and error behaviour
 

@@ -1,66 +1,46 @@
-{% extends "base_public.html" %} {% block title %}Payment Receipt — Invoice {{
-invoice.invoice_number }}{% endblock %} {% block content %}
+{% extends "base_public.html" %}
+
+{% block title %}Payment Receipt — Invoice {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
 <div class="max-w-xl mx-auto space-y-6">
+
     <!-- Success Announcement -->
     <div class="text-center space-y-2 py-4">
-        <div
-            class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success/10 text-success text-3xl font-bold"
-        >
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success/10 text-success text-3xl font-bold">
             ✓
         </div>
-        {% if latest_payment.provider == 'demo_stub' %}
-        <span class="badge badge-warning"
-            >Demo simulation — not provider verified</span
-        >
-        <h1 class="text-3xl font-extrabold text-base-content">
-            Demo Payment Simulated
-        </h1>
+        <h1 class="text-3xl font-extrabold text-base-content">Payment Confirmed</h1>
+        {% if latest_payment.provider == 'demo_stub' or latest_payment.provider == 'mock_demo' %}
+        <div>
+            <span class="badge badge-warning">Demo simulation — not provider verified</span>
+        </div>
         <p class="text-sm text-base-content/60" role="status">
-            No money was transferred. This is a demonstration record, not an
-            official payment receipt.
+            No real money was transferred. This is a demonstration record for testing.
         </p>
         {% else %}
-        <h1 class="text-3xl font-extrabold text-base-content">
-            Payment Confirmed
-        </h1>
         <p class="text-sm text-base-content/60">
             Thank you for your payment. Your receipt is recorded below.
         </p>
         {% endif %}
     </div>
-    <h1 class="text-3xl font-extrabold text-base-content">Payment Confirmed</h1>
-    <p class="text-sm text-base-content/60">
-      Thank you for your payment. Your receipt is recorded below.
-    </p>
-  </div>
 
     <!-- Receipt Card Document -->
     <div class="card bg-base-100 shadow-lg border border-base-200">
         <div class="card-body p-8 space-y-6">
+
             <!-- Header: Receipt info -->
-            <div
-                class="flex items-center justify-between border-b border-base-200 pb-4"
-            >
+            <div class="flex items-center justify-between border-b border-base-200 pb-4">
                 <div>
-                    <span
-                        class="text-xs uppercase font-bold text-base-content/40 tracking-wider"
-                        >Receipt Reference</span
-                    >
+                    <span class="text-xs uppercase font-bold text-base-content/40 tracking-wider">Receipt Reference</span>
                     <div class="font-mono text-sm font-bold">
-                        {{
-                        latest_payment.provider_reference|default:latest_payment.id
-                        }}
+                        {{ latest_payment.provider_reference|default:latest_payment.id }}
                     </div>
                 </div>
                 <div class="text-right">
-                    <span
-                        class="text-xs uppercase font-bold text-base-content/40 tracking-wider"
-                        >Date</span
-                    >
+                    <span class="text-xs uppercase font-bold text-base-content/40 tracking-wider">Date</span>
                     <div class="text-sm font-medium">
-                        {{ latest_payment.confirmed_at|date:"M j, Y,
-                        H:i"|default:latest_payment.initiated_at|date:"M j, Y"
-                        }}
+                        {{ latest_payment.confirmed_at|date:"M j, Y, H:i"|default:latest_payment.initiated_at|date:"M j, Y" }}
                     </div>
                 </div>
             </div>
@@ -68,24 +48,16 @@ invoice.invoice_number }}{% endblock %} {% block content %}
             <!-- Parties -->
             <div class="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                    <span
-                        class="text-xs uppercase font-bold text-base-content/40 block"
-                        >Paid To</span
-                    >
+                    <span class="text-xs uppercase font-bold text-base-content/40 block">Paid To</span>
                     <span class="font-bold">
-                        {{
-                        invoice.artist.artist_profile.business_name|default:invoice.artist.artist_profile.display_name|default:invoice.artist.email
-                        }}
+                        {{ invoice.artist.artist_profile.business_name|default:invoice.artist.artist_profile.display_name|default:invoice.artist.email }}
                     </span>
                     <div class="text-xs text-base-content/60">
                         {{ invoice.artist.email }}
                     </div>
                 </div>
                 <div class="text-right">
-                    <span
-                        class="text-xs uppercase font-bold text-base-content/40 block"
-                        >Paid By</span
-                    >
+                    <span class="text-xs uppercase font-bold text-base-content/40 block">Paid By</span>
                     <span class="font-bold">{{ invoice.customer.name }}</span>
                     {% if invoice.customer.email %}
                     <div class="text-xs text-base-content/60">
@@ -99,91 +71,62 @@ invoice.invoice_number }}{% endblock %} {% block content %}
             <div class="bg-base-200/50 p-4 rounded-lg space-y-2 text-sm">
                 <div class="flex justify-between">
                     <span class="text-base-content/60">Invoice Reference</span>
-                    <span class="font-mono font-bold"
-                        >{{ invoice.invoice_number }}</span
-                    >
+                    <span class="font-mono font-bold">{{ invoice.invoice_number }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-base-content/60">Payment Method</span>
-                    <span class="font-medium"
-                        >{{ latest_payment.payment_method }}</span
-                    >
+                    <span class="font-medium">{{ latest_payment.payment_method }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-base-content/60">Payment Status</span>
-                    {% if latest_payment.provider == 'demo_stub' %}
+                    {% if latest_payment.provider == 'demo_stub' or latest_payment.provider == 'mock_demo' %}
                     <span class="badge badge-warning badge-sm">Simulated</span>
                     {% else %}
-                    <span class="badge badge-success badge-sm"
-                        >{{ latest_payment.get_status_display }}</span
-                    >
+                    <span class="badge badge-success badge-sm">{{ latest_payment.get_status_display }}</span>
                     {% endif %}
                 </div>
                 <div class="divider my-1"></div>
-                <div
-                    class="flex justify-between text-base font-bold text-success"
-                >
+                <div class="flex justify-between text-base font-bold text-success">
                     <span>Amount Paid</span>
-                    <span
-                        >{{ latest_payment.amount }} {{ latest_payment.currency
-                        }}</span
-                    >
+                    <span>{{ latest_payment.amount }} {{ latest_payment.currency }}</span>
                 </div>
-                <div
-                    class="flex justify-between text-sm font-semibold border-t border-base-300 pt-2"
-                >
+                <div class="flex justify-between text-sm font-semibold border-t border-base-300 pt-2">
                     <span>Remaining Invoice Balance</span>
-                    <span
-                        class="{% if invoice.balance_due > 0 %}text-warning{% else %}text-success{% endif %}"
-                    >
+                    <span class="{% if invoice.balance_due > 0 %}text-warning{% else %}text-success{% endif %}">
                         {{ invoice.balance_due }} {{ invoice.currency }}
                     </span>
                 </div>
             </div>
 
-      <!-- Payment Breakdown -->
-      <div class="bg-base-200/50 p-4 rounded-lg space-y-2 text-sm">
-        <div class="flex justify-between">
-          <span class="text-base-content/60">Invoice Reference</span>
-          <span class="font-mono font-bold">{{ invoice.invoice_number }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-base-content/60">Payment Method</span>
-          <span class="font-medium">{{ latest_payment.payment_method }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-base-content/60">Payment Status</span>
-          <span class="badge badge-success badge-sm">{{ latest_payment.get_status_display }}</span>
-        </div>
-        <div class="divider my-1"></div>
-        <div class="flex justify-between text-base font-bold text-success">
-          <span>Amount Paid</span>
-          <span>{{ latest_payment.amount }} {{ latest_payment.currency }}</span>
-        </div>
-        <div class="flex justify-between text-sm font-semibold border-t border-base-300 pt-2">
-          <span>Remaining Invoice Balance</span>
-          <span class="{% if invoice.balance_due > 0 %}text-warning{% else %}text-success{% endif %}">
-            {{ invoice.balance_due }} {{ invoice.currency }}
-          </span>
-        </div>
-      </div>
+            <!-- Artist Notification Status Callout -->
+            <div class="p-3 bg-base-200/60 rounded-lg text-xs space-y-1">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="text-base">📱</span>
+                        {% if invoice.artist.artist_profile.phone_number %}
+                        <span>
+                            <strong>Artist SMS Notification:</strong> Dispatched to <span class="font-mono text-primary">{{ invoice.artist.artist_profile.phone_number }}</span>.
+                        </span>
+                        {% else %}
+                        <span class="text-base-content/60">
+                            <strong>Artist SMS Notification:</strong> Artist has no phone number on profile.
+                        </span>
+                        {% endif %}
+                    </div>
+                    <span class="badge badge-sm badge-ghost font-mono">SMS Alert</span>
+                </div>
+            </div>
 
-            <div
-                class="pt-4 flex flex-col sm:flex-row gap-3 items-center justify-between border-t border-base-200"
-            >
-                <a
-                    href="{% url 'billing:public_invoice' token=token %}"
-                    class="btn btn-ghost btn-sm w-full sm:w-auto"
-                >
+            <!-- Actions -->
+            <div class="pt-4 flex flex-col sm:flex-row gap-3 items-center justify-between border-t border-base-200">
+                <a href="{% url 'billing:public_invoice' token=token %}" class="btn btn-ghost btn-sm w-full sm:w-auto">
                     &larr; View Full Invoice
                 </a>
-                <button
-                    onclick="window.print()"
-                    class="btn btn-outline btn-sm w-full sm:w-auto"
-                >
+                <button onclick="window.print()" class="btn btn-outline btn-sm w-full sm:w-auto">
                     🖨️ Print Receipt
                 </button>
             </div>
+
         </div>
     </div>
 </div>

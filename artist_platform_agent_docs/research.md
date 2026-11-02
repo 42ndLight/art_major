@@ -8,7 +8,7 @@ This file separates user intent from assumptions and verified external facts. Re
 - **Verified from the project notes:** The intended core journey is artist → customer → project → invoice → customer invoice page → payment status/receipt.
 - **User-provided answers:** None are recorded in this folder yet. The previous contents were questions and templates rather than answers. Add answers below as they become available.
 - **Not verified:** Hackathon brief, judging criteria, deadline, Africa's Talking channel/API requirements, payment provider, launch country/currencies, and hosting.
-- **Project status:** Documentation only. No application code or runnable project exists in this repository yet.
+- **Project status:** Django application with customer, project, invoice, and Paystack payment support. Africa's Talking inbound SMS commands are implemented on `feature-AT`; provider sandbox verification is pending.
 
 ## Decision log
 
@@ -19,6 +19,7 @@ This file separates user intent from assumptions and verified external facts. Re
 | D-003 | Build one complete customer-to-invoice path before expanding into analytics, plans, or automation. | Verified | Keeps the first release demonstrable and small. | A confirmed event brief requires a different demo. |
 | D-004 | Treat Africa's Talking as a possible required integration, but do not select a channel until the event brief confirms it. | Unresolved | No event brief or official API evidence is recorded. | Official brief and account sandbox are reviewed. |
 | D-005 | Use Paystack as the primary payment provider for the first demo. | Verified | User preference. | Market expansion or provider failure. |
+| D-006 | Accept SMS commands only from verified artist phone numbers; SMS-created invoices remain drafts. | Implemented on feature-AT | Protects artist ownership and avoids issuing an invoice from an ambiguous text. | AT sandbox verification and user feedback. |
 
 ## Questions to answer first
 
@@ -52,6 +53,13 @@ This file separates user intent from assumptions and verified external facts. Re
 | P0       | Payment provider fit                | Official country/currency/onboarding docs and verified sandbox flow    | Payment implementation                 |
 | P1       | Hosting and deployment              | Current platform constraints and environment requirements              | Deployment setup                       |
 | P1       | Framework/tool versions             | Official docs and project setup once a repository exists               | Dependency selection                   |
+
+### Africa's Talking implementation note (2026-10-28)
+
+- Official references: [SMS notifications](https://developers.africastalking.com/docs/sms/notifications), [SMS best practices](https://developers.africastalking.com/docs/sms/best_practices), and [developer portal](https://developers.africastalking.com/).
+- The docs are JavaScript-rendered in the current research environment, so inbound field and retry details have not been independently confirmed here.
+- The webhook expects `from`, `text`, and stable `id`, and uses a high-entropy secret URL token. Outbound SMS uses AT's REST messaging endpoint with sandbox as the default environment.
+- **Before production:** check callback fields, replay behavior, sender ID setup, and outbound delivery with the account sandbox; confirm country and account availability.
 
 ## Evidence entry template
 

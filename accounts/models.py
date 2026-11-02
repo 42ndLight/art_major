@@ -5,6 +5,7 @@ import uuid
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.db.models import Q
 
 
 class UserManager(BaseUserManager):
@@ -76,12 +77,24 @@ class ArtistProfile(models.Model):
     business_name = models.CharField(max_length=200, blank=True)
     default_currency = models.CharField(max_length=3, default="USD")
     timezone = models.CharField(max_length=50, blank=True)
+    phone_number = models.CharField(max_length=32, blank=True, db_index=True)
+    phone_verified_at = models.DateTimeField(null=True, blank=True)
+    sms_verification_code_hash = models.CharField(max_length=128, blank=True)
+    sms_verification_expires_at = models.DateTimeField(null=True, blank=True)
+    sms_verification_attempts = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "artist profile"
         verbose_name_plural = "artist profiles"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["phone_number"],
+                condition=~Q(phone_number=""),
+                name="unique_nonempty_artist_sms_phone",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.display_name} ({self.user.email})"

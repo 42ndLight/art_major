@@ -114,3 +114,31 @@ def test_invoice_owner_scoping(client, artist_user, another_artist):
     assert client.post(reverse("billing:invoice_issue", kwargs={"pk": other_invoice.pk})).status_code == 404
     # Void 404
     assert client.post(reverse("billing:invoice_void", kwargs={"pk": other_invoice.pk})).status_code == 404
+
+
+@pytest.mark.django_db
+def test_invoice_detail_view_renders_successfully(auth_client, artist_user):
+    """InvoiceDetailView renders invoice_detail.html without TemplateSyntaxError."""
+    customer = Customer.objects.create(artist=artist_user, name="Detail Patron")
+    invoice = Invoice.objects.create(
+        artist=artist_user,
+        customer=customer,
+        invoice_number="INV-DETAIL-01",
+        currency="USD",
+        status=InvoiceStatus.ISSUED,
+    )
+    InvoiceLine.objects.create(
+        invoice=invoice,
+        description="Detail Line",
+        quantity=Decimal("1.00"),
+        unit_price=Decimal("150.00"),
+    )
+    invoice.calculate_totals()
+    invoice.issue()
+
+    url = reverse("billing:invoice_detail", kwargs={"pk": invoice.pk})
+    resp = auth_client.get(url)
+    assert resp.status_code == 200
+    assert "INV-DETAIL-01" in resp.content.decode()
+    assert "Detail Line" in resp.content.decode()
+

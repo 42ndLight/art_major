@@ -28,6 +28,8 @@ Suggested fields:
 - `timezone` (optional)
 - `created_at`, `updated_at`
 
+For inbound SMS command ownership, `ArtistProfile` also stores `phone_number`, `phone_verified_at`, a hashed one-time verification code, expiry, and a failed-attempt count. Verified phone numbers are unique across artist accounts. The OTP is short-lived and invalidated after five failed attempts.
+
 Authentication approach and whether profile fields live on a separate `ArtistProfile` are open decisions. Prefer a separate profile if it keeps auth concerns clean.
 
 ### 2. Customer
@@ -186,7 +188,20 @@ Rules:
 - Tests must use mocked provider calls.
 - Failed messages must not undo invoice/payment state.
 
-### 10. Optional Subscription / Plan
+### 10. InboundSMS
+
+Fields:
+- `id`: UUID
+- `provider_message_id`: stable AT message identifier
+- `idempotency_key`: unique digest derived from provider and message ID
+- `artist_id`: nullable FK to matched artist
+- `sender`: normalized sender number
+- `message_digest`: SHA-256 digest; raw SMS body is not retained
+- `command`, `outcome`, `created_at`
+
+Use this record to suppress provider retries and audit command outcome. Retain minimal personal data and apply an appropriate retention policy.
+
+### 11. Optional Subscription / Plan
 Not required for MVP unless a paid tier must be launched immediately. If introduced later:
 - `artist_id`
 - `plan_key`
